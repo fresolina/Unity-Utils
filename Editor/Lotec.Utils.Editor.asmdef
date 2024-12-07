@@ -1,0 +1,16 @@
+{
+    "name": "Lotec.Utils.Editor",
+    "rootNamespace": "",
+    "references": [
+        "GUID:1e2b0556c68518144a515ec9b33f1c0b"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
