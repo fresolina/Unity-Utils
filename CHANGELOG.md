@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.0.1](https://github.com/fresolina/Unity-Utils/compare/v1.0.0...v1.0.1) (2024-12-07)
+
+
+### Bug Fixes
+
+* fool changelog version ([72ba70d](https://github.com/fresolina/Unity-Utils/commit/72ba70d9a8831063132b86ada8dde0407347c8ad))
+* sync changelog version ([fddef4c](https://github.com/fresolina/Unity-Utils/commit/fddef4c434e2cafb9905901b44f0293c21bcd4da))
+
 ## 0.2.1 (2024-12-07)
 
 ### Features
