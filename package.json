@@ -1,7 +1,7 @@
 {
     "name": "com.lotecsoftware.utils",
     "version": "0.2.1",
-    "displayName": "Lotec.Utils",
+    "displayName": "Lotec Utils",
     "description": "Utils package for Unity",
     "unity": "2022.3",
     "dependencies": {},
