@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.0](https://github.com/fresolina/Unity-Utils/compare/v1.0.1...v1.1.0) (2025-02-23)
+
+
+### Features
+
+* add interface reference and condition/action handling classes ([0e3496d](https://github.com/fresolina/Unity-Utils/commit/0e3496dfaf84f74dd4881e4a69869161bd1a1279))
+
 ## [1.0.1](https://github.com/fresolina/Unity-Utils/compare/v1.0.0...v1.0.1) (2024-12-07)
 
 
