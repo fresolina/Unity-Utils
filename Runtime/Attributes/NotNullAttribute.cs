@@ -46,7 +46,7 @@ namespace Lotec.Utils.Attributes {
                 if (attributes.Length == 0) continue; // Only process fields with the [NotNull] attribute
                 if (field.GetValue(obj) != null) continue; // Only attempt to set if the field is currently null
                 Type fieldType = field.FieldType;
-                if (!typeof(Component).IsAssignableFrom(fieldType)) continue; // Only process Components
+                if (!typeof(Component).IsAssignableFrom(fieldType) && !fieldType.IsInterface) continue; // Skip Assets
 
                 // Try get missing NotNull component from the GameObject
                 Component component = obj.GetComponent(fieldType);
