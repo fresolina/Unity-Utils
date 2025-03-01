@@ -1,5 +1,19 @@
 # Changelog
 
+## [1.1.0](https://github.com/fresolina/Unity-Utils/compare/v1.0.1...v1.1.0) (2025-03-01)
+
+
+### Features
+
+* add interface reference and condition/action handling classes ([0e3496d](https://github.com/fresolina/Unity-Utils/commit/0e3496dfaf84f74dd4881e4a69869161bd1a1279))
+
+
+### Bug Fixes
+
+* add Reset method to invoke OnValidate in editor ([ae6ef7a](https://github.com/fresolina/Unity-Utils/commit/ae6ef7a307e06a18f8fa8511dadf50d9e0df80e6))
+* refine NotNullAttribute to only process Component types ([87b6b35](https://github.com/fresolina/Unity-Utils/commit/87b6b354e7fcebe1c7eabcd1fe1d7640a93b1d6b))
+* update NotNullAttribute to also process interface types ([ca309ef](https://github.com/fresolina/Unity-Utils/commit/ca309ef23e4d77238c103e1fa4fc73b54b66fc13))
+
 ## [1.0.1](https://github.com/fresolina/Unity-Utils/compare/v1.0.0...v1.0.1) (2024-12-07)
 
 
