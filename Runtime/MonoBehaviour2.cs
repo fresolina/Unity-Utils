@@ -20,10 +20,16 @@ namespace Lotec.Utils {
         [SerializeField]
         List<InterfaceFieldData> _serializedInterfaceFields = new List<InterfaceFieldData>();
 
+#if UNITY_EDITOR
         protected virtual void OnValidate() {
             this.SetNotNullFields();
             this.AssertNotNullFields();
         }
+
+        protected virtual void Reset() {
+            OnValidate();
+        }
+#endif
 
         public void OnBeforeSerialize() {
             _serializedInterfaceFields.Clear();
