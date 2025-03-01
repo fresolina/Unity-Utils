@@ -45,12 +45,11 @@ namespace Lotec.Utils.Attributes {
                 NotNullAttribute[] attributes = (NotNullAttribute[])field.GetCustomAttributes(typeof(NotNullAttribute), inherit: true);
                 if (attributes.Length == 0) continue; // Only process fields with the [NotNull] attribute
                 if (field.GetValue(obj) != null) continue; // Only attempt to set if the field is currently null
-
                 Type fieldType = field.FieldType;
+                if (!typeof(Component).IsAssignableFrom(fieldType)) continue; // Only process Components
 
-                // Ensure the field type is a Component or derived
+                // Try get missing NotNull component from the GameObject
                 Component component = obj.GetComponent(fieldType);
-
                 if (component != null) {
                     field.SetValue(obj, component);
                     Debug.Log($"Automatically assigned '{fieldType.Name}' to field '{field.Name}' on '{obj.gameObject.name}'.", obj.gameObject);
