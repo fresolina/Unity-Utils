@@ -52,9 +52,9 @@ namespace Lotec.Utils.Attributes {
                 Component component = obj.GetComponentInChildren(fieldType);
                 if (component != null && component != obj) {
                     field.SetValue(obj, component);
-                    Debug.Log($"Automatically assigned '{fieldType.Name}' to field '{field.Name}' on '{obj.gameObject.name}'.", obj.gameObject);
+                    Debug.Log($"Automatically assigned '{fieldType.Name}' to field '{field.Name}' on '{obj}'.", obj.gameObject);
                 } else {
-                    Debug.LogWarning($"[NotNull] field '{field.Name}' of type '{fieldType.Name}' requires a component that was not found on '{obj.gameObject.name}'.", obj.gameObject);
+                    Debug.LogWarning($"[NotNull] field '{field.Name}' of type '{fieldType.Name}' requires a component that was not found on '{obj}'.", obj.gameObject);
                 }
             }
         }
