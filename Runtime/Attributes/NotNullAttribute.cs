@@ -49,8 +49,8 @@ namespace Lotec.Utils.Attributes {
                 if (!typeof(Component).IsAssignableFrom(fieldType) && !fieldType.IsInterface) continue; // Skip Assets
 
                 // Try get missing NotNull component from the GameObject
-                Component component = obj.GetComponent(fieldType);
-                if (component != null) {
+                Component component = obj.GetComponentInChildren(fieldType);
+                if (component != null && component != obj) {
                     field.SetValue(obj, component);
                     Debug.Log($"Automatically assigned '{fieldType.Name}' to field '{field.Name}' on '{obj.gameObject.name}'.", obj.gameObject);
                 } else {
