@@ -20,6 +20,10 @@ namespace Lotec.Utils {
         [SerializeField]
         List<InterfaceFieldData> _serializedInterfaceFields = new List<InterfaceFieldData>();
 
+        // Serialize Dictionaries
+        List<InterfaceFieldData> _serializedDictionaryKeyFields = new List<InterfaceFieldData>();
+        List<InterfaceFieldData> _serializedDictionaryValueFields = new List<InterfaceFieldData>();
+
 #if UNITY_EDITOR
         protected virtual void OnValidate() {
             this.SetNotNullFields();
@@ -31,24 +35,42 @@ namespace Lotec.Utils {
         }
 #endif
 
+        void SerializeInterface(FieldInfo f) {
+            // Ensure field is an interface
+            if (!f.FieldType.IsInterface) return;
+
+            // Get the value and cast to Object if it's a MonoBehaviour/ScriptableObject
+            var value = f.GetValue(this) as UnityEngine.Object;
+            if (value != null && !f.FieldType.IsAssignableFrom(value.GetType())) return;
+
+            _serializedInterfaceFields.Add(new InterfaceFieldData {
+                fieldName = f.Name,
+                objectRef = value
+            });
+        }
+
+        void SerializeDictionary(FieldInfo f) {
+            // Ensure field is a dictionary
+            if (!f.FieldType.IsGenericType || f.FieldType.GetGenericTypeDefinition() != typeof(Dictionary<,>)) return;
+
+            // Get the value and cast to Object if it's a MonoBehaviour/ScriptableObject
+            // var value = f.GetValue(this) as UnityEngine.Object;
+        }
+
         public void OnBeforeSerialize() {
             _serializedInterfaceFields.Clear();
+            _serializedDictionaryKeyFields.Clear();
+            _serializedDictionaryValueFields.Clear();
 
             // Get all fields (public, private, instance) in the derived type(s).
             var fields = GetType().GetFields(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
 
             foreach (var f in fields) {
-                // Ensure field is an interface and has [SerializeField] attribute
-                if (!f.FieldType.IsInterface || !Attribute.IsDefined(f, typeof(SerializeField))) continue;
+                // Ensure field is supposed to be serialized.
+                if (!Attribute.IsDefined(f, typeof(SerializeField))) continue;
 
-                // Get the value and cast to Object if it's a MonoBehaviour/ScriptableObject
-                var value = f.GetValue(this) as UnityEngine.Object;
-                if (value != null && !f.FieldType.IsAssignableFrom(value.GetType())) continue;
-
-                _serializedInterfaceFields.Add(new InterfaceFieldData {
-                    fieldName = f.Name,
-                    objectRef = value
-                });
+                SerializeInterface(f);
+                // SerializeDictionary(f);
             }
         }
 
