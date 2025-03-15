@@ -1,5 +1,23 @@
 # Changelog
 
+## [1.1.0](https://github.com/fresolina/Unity-Utils/compare/v1.0.1...v1.1.0) (2025-03-15)
+
+
+### Features
+
+* add asset reserialization functionality to context menu and selection ([3ebf8e0](https://github.com/fresolina/Unity-Utils/commit/3ebf8e014139a67e6861f79878c17cd3369cf391))
+* add interface reference and condition/action handling classes ([0e3496d](https://github.com/fresolina/Unity-Utils/commit/0e3496dfaf84f74dd4881e4a69869161bd1a1279))
+* implement EmojiIconManager for emoji name to unicode conversion ([3b2964a](https://github.com/fresolina/Unity-Utils/commit/3b2964a5f4b21d2831f8a61b108c17be59ffb451))
+
+
+### Bug Fixes
+
+* add Reset method to invoke OnValidate in editor ([ae6ef7a](https://github.com/fresolina/Unity-Utils/commit/ae6ef7a307e06a18f8fa8511dadf50d9e0df80e6))
+* improve logs with component name ([607a43a](https://github.com/fresolina/Unity-Utils/commit/607a43a207c88078405ce1606f298fb665f8249f))
+* NotNullAttribute should also search in children and skip self ([0489ec6](https://github.com/fresolina/Unity-Utils/commit/0489ec679e60288d090320798f7427e8e0af3997))
+* refine NotNullAttribute to only process Component types ([87b6b35](https://github.com/fresolina/Unity-Utils/commit/87b6b354e7fcebe1c7eabcd1fe1d7640a93b1d6b))
+* update NotNullAttribute to also process interface types ([ca309ef](https://github.com/fresolina/Unity-Utils/commit/ca309ef23e4d77238c103e1fa4fc73b54b66fc13))
+
 ## [1.0.1](https://github.com/fresolina/Unity-Utils/compare/v1.0.0...v1.0.1) (2024-12-07)
 
 
