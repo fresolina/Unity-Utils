@@ -1,3 +1,4 @@
+#if UNITY_EDITOR
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.Assertions;
@@ -43,3 +44,4 @@ namespace Lotec.Utils.Attributes.Editors {
         }
     }
 }
+#endif

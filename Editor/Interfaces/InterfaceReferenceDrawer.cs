@@ -1,3 +1,4 @@
+#if UNITY_EDITOR
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -49,9 +50,9 @@ public class InterfaceReferenceDrawer : PropertyDrawer {
 
         bool TryGetTypesFromInterfaceReference(Type type, out Type objType, out Type intfType) {
             objType = intfType = null;
-            
+
             if (type?.IsGenericType != true) return false;
-            
+
             var genericType = type.GetGenericTypeDefinition();
             if (genericType == typeof(InterfaceReference<>)) type = type.BaseType;
 
@@ -61,13 +62,13 @@ public class InterfaceReferenceDrawer : PropertyDrawer {
                 objType = types[1];
                 return true;
             }
-            
+
             return false;
         }
 
         void GetTypesFromList(Type type, out Type objType, out Type intfType) {
             objType = intfType = null;
-            
+
             var listInterface = type.GetInterfaces()
                 .FirstOrDefault(x => x.IsGenericType && x.GetGenericTypeDefinition() == typeof(IList<>));
 
@@ -80,7 +81,7 @@ public class InterfaceReferenceDrawer : PropertyDrawer {
         if (!TryGetTypesFromInterfaceReference(fieldType, out objectType, out interfaceType)) {
             GetTypesFromList(fieldType, out objectType, out interfaceType);
         }
-        
+
         return new InterfaceArgs(objectType, interfaceType);
     }
 
@@ -107,8 +108,9 @@ public struct InterfaceArgs {
     public InterfaceArgs(Type objectType, Type interfaceType) {
         Debug.Assert(typeof(Object).IsAssignableFrom(objectType), $"{nameof(objectType)} needs to be of Type {typeof(Object)}.");
         Debug.Assert(interfaceType.IsInterface, $"{nameof(interfaceType)} needs to be an interface.");
-        
+
         ObjectType = objectType;
         InterfaceType = interfaceType;
     }
 }
+#endif

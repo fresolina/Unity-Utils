@@ -1,25 +1,22 @@
+#if UNITY_EDITOR
 using System;
 using System.Collections.Generic;
-using System.Text.RegularExpressions;
 using System.Linq;
 using System.Reflection;
+using System.Text.RegularExpressions;
 using UnityEditor;
 using UnityEngine;
 
-namespace Lotec.Utils.Interfaces.Editor
-{
-    public static class TypeExtensions
-    {
+namespace Lotec.Utils.Interfaces.Editor {
+    public static class TypeExtensions {
         // If type name ends with base type name, remove it.
         // Excludes prefixed 'I', commonly used in interface names.
         // Adds space before capital letters.
-        public static string ToHumanizedString(this Type type, Type baseType)
-        {
+        public static string ToHumanizedString(this Type type, Type baseType) {
             string typeName = type.Name;
             string baseName = baseType.Name;
 
-            if (baseType != null && baseType.IsAssignableFrom(type))
-            {
+            if (baseType != null && baseType.IsAssignableFrom(type)) {
                 // Remove 'I' from the interface name
                 if (baseType.IsInterface)
                     baseName = Regex.Replace(baseName, @"^I(.*)", "$1");
@@ -34,14 +31,12 @@ namespace Lotec.Utils.Interfaces.Editor
     }
 
     [InitializeOnLoad]
-    public static class TypeHelper
-    {
+    public static class TypeHelper {
         public static Dictionary<Type, Type[]> s_typesFromInterfaceType;
         public static readonly Type[] s_typesToCheckWithArrays;
         public static readonly Type[] s_typesToCheck;
 
-        static TypeHelper()
-        {
+        static TypeHelper() {
             Assembly[] assemblies = AppDomain.CurrentDomain.GetAssemblies();
             s_typesToCheck = assemblies
                 .SelectMany(assembly => assembly.GetTypes())
@@ -74,49 +69,38 @@ namespace Lotec.Utils.Interfaces.Editor
     }
 
     // T == interfaceType
-    public abstract class SerializeReferenceDrawer<T> : PropertyDrawer
-    {
+    public abstract class SerializeReferenceDrawer<T> : PropertyDrawer {
         readonly TypeMap[] _typeInfos;
 
-        public SerializeReferenceDrawer()
-        {
+        public SerializeReferenceDrawer() {
             _typeInfos = TypeHelper.s_typesFromInterfaceType[typeof(T)]
                 .Select(t => new TypeMap { Type = t, Name = t.Name, HumanizedName = t.ToHumanizedString(typeof(T)) })
                 .ToArray();
         }
 
-        public override void OnGUI(Rect position, SerializedProperty property, GUIContent label)
-        {
+        public override void OnGUI(Rect position, SerializedProperty property, GUIContent label) {
             bool showCreateButton = false;
-            try
-            {
+            try {
                 showCreateButton = property.managedReferenceValue == null;
-                if (!showCreateButton)
-                {
+                if (!showCreateButton) {
                     label.text = property.managedReferenceValue.GetType().ToHumanizedString(typeof(T));
                 }
-            }
-            catch (InvalidOperationException)
-            {
+            } catch (InvalidOperationException) {
                 Debug.LogError("InvalidOperationException");
                 // property.managedReferenceValue only exists on SerializeReference property.
             }
 
-            if (!showCreateButton)
-            {
+            if (!showCreateButton) {
                 EditorGUI.PropertyField(position, property, label, true);
                 return;
             }
 
             // Create a dropdown button
-            if (EditorGUI.DropdownButton(position, new GUIContent("Create Type"), FocusType.Passive))
-            {
+            if (EditorGUI.DropdownButton(position, new GUIContent("Create Type"), FocusType.Passive)) {
                 GenericMenu menu = new GenericMenu();
-                for (int i = 0; i < _typeInfos.Length; i++)
-                {
+                for (int i = 0; i < _typeInfos.Length; i++) {
                     TypeMap typeInfo = _typeInfos[i];
-                    menu.AddItem(new GUIContent(typeInfo.HumanizedName), false, () =>
-                    {
+                    menu.AddItem(new GUIContent(typeInfo.HumanizedName), false, () => {
                         Type currentType = property.managedReferenceValue?.GetType();
                         if (currentType == typeInfo.Type) return;
 
@@ -135,17 +119,14 @@ namespace Lotec.Utils.Interfaces.Editor
     }
 
     [InitializeOnLoad]
-    public static class AttributeChecker
-    {
-        static AttributeChecker()
-        {
+    public static class AttributeChecker {
+        static AttributeChecker() {
             Assembly[] assemblies = AppDomain.CurrentDomain.GetAssemblies();
 
             CheckForSerializeFieldAttribute(assemblies);
         }
 
-        public static void CheckForSerializeFieldAttribute(Assembly[] assemblies)
-        {
+        public static void CheckForSerializeFieldAttribute(Assembly[] assemblies) {
             var membersToCheck = assemblies
                 .SelectMany(assembly => assembly.GetTypes())
                 .SelectMany(type => type.GetFields(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance)
@@ -158,16 +139,15 @@ namespace Lotec.Utils.Interfaces.Editor
                 )
                 .Where(member => TypeHelper.s_typesToCheckWithArrays.Contains(member.Type));
 
-            foreach (var member in membersToCheck)
-            {
+            foreach (var member in membersToCheck) {
                 Debug.LogWarning($"'{member.Name}' in class '{member.Type.DeclaringType.Name}' is of type '{member.Type}' and uses [SerializeField].");
             }
         }
     }
-    public struct TypeMap
-    {
+    public struct TypeMap {
         public Type Type;
         public string Name;
         public string HumanizedName;
     }
 }
+#endif

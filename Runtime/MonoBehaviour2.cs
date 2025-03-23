@@ -26,11 +26,11 @@ namespace Lotec.Utils {
 
 #if UNITY_EDITOR
         protected virtual void OnValidate() {
-            this.SetNotNullFields();
             this.AssertNotNullFields();
         }
 
         protected virtual void Reset() {
+            this.SetNotNullFields();
             OnValidate();
         }
 #endif

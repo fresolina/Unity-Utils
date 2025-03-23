@@ -1,5 +1,6 @@
-using UnityEditor;
+#if UNITY_EDITOR
 using Lotec.Utils.Interfaces.Editor;
+using UnityEditor;
 
 namespace Lotec.Utils.Triggers.Editor {
     [CustomPropertyDrawer(typeof(ICondition), true)]
@@ -8,3 +9,4 @@ namespace Lotec.Utils.Triggers.Editor {
     [CustomPropertyDrawer(typeof(IAction), true)]
     public class IActionDrawer : SerializeReferenceDrawer<IAction> { }
 }
+#endif

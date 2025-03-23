@@ -1,3 +1,4 @@
+#if UNITY_EDITOR
 using System;
 using System.Collections.Generic;
 using UnityEditor;
@@ -17,7 +18,7 @@ public class RequireInterfaceDrawer : PropertyDrawer {
         } else {
             DrawInterfaceObjectField(position, property, label, requiredInterfaceType);
         }
-        
+
         EditorGUI.EndProperty();
         var args = new InterfaceArgs(GetTypeOrElementType(fieldInfo.FieldType), requiredInterfaceType);
         InterfaceReferenceUtil.OnGUI(position, property, label, args);
@@ -26,7 +27,7 @@ public class RequireInterfaceDrawer : PropertyDrawer {
     void DrawArrayField(Rect position, SerializedProperty property, GUIContent label, Type interfaceType) {
         property.arraySize = EditorGUI.IntField(new Rect(position.x, position.y, position.width, EditorGUIUtility.singleLineHeight),
             label.text + " Size", property.arraySize);
-        
+
         float yOffset = EditorGUIUtility.singleLineHeight;
         for (int i = 0; i < property.arraySize; i++) {
             var element = property.GetArrayElementAtIndex(i);
@@ -50,10 +51,10 @@ public class RequireInterfaceDrawer : PropertyDrawer {
 
     Type GetAssignableBaseType(Type fieldType, Type interfaceType) {
         Type elementType = fieldType.IsArray ? fieldType.GetElementType() :
-            fieldType.IsGenericType && fieldType.GetGenericTypeDefinition() == typeof(List<>) 
-                ? fieldType.GetGenericArguments()[0] 
+            fieldType.IsGenericType && fieldType.GetGenericTypeDefinition() == typeof(List<>)
+                ? fieldType.GetGenericArguments()[0]
                 : fieldType;
-        
+
         if (interfaceType.IsAssignableFrom(elementType)) return elementType;
 
         if (typeof(ScriptableObject).IsAssignableFrom(elementType)) return typeof(ScriptableObject);
@@ -73,7 +74,7 @@ public class RequireInterfaceDrawer : PropertyDrawer {
             property.objectReferenceValue = newReference;
             return;
         }
-        
+
         Debug.LogWarning($"The assigned object does not implement '{interfaceType.Name}'.");
         property.objectReferenceValue = null;
     }
@@ -84,3 +85,4 @@ public class RequireInterfaceDrawer : PropertyDrawer {
         return type;
     }
 }
+#endif
