@@ -19,7 +19,7 @@ namespace Lotec.Utils {
     }
 
     public class MeshCombiner {
-        readonly string _simplifiedPostfix = ".Simplified";
+        public string SimplifiedPostfix { get; set; } = ".Simplified";
         readonly Dictionary<Material, List<CombineInstance>> _simplifiedMeshes = new();
 
         // Combine children meshes to one mesh.
@@ -28,59 +28,73 @@ namespace Lotec.Utils {
         // * If combined mesh has more than 65535 vertices, it gets split into multiple meshes, named _part1, _part2, etc.
         // * If meshes have different materials, they are split into separate meshes.
         // TODO: Add option to support HLOD, with one mesh per Transform container.
-        public void CreateSimplifiedMesh(Transform meshGroup) {
+        public GameObject CreateSimplifiedMesh(Transform meshGroup) {
             _simplifiedMeshes.Clear();
             CollectMeshCombines(meshGroup);
+            Transform container = meshGroup.parent;
+            string simplifiedContainerName = $"{meshGroup.name}{SimplifiedPostfix}";
 
+            if (_simplifiedMeshes.Count > 1) {
+                container = new GameObject(simplifiedContainerName).transform;
+                container.SetParent(meshGroup.parent);
+            }
+
+            // Create a new mesh for each material.
             foreach (var kvp in _simplifiedMeshes) {
                 List<CombineInstance> combines = kvp.Value;
                 Material material = kvp.Key;
-                string simplifiedName = $"{meshGroup.name}{_simplifiedPostfix}.{material.name}";
-                ProcessCombineInstances(meshGroup, simplifiedName, material, combines);
+                string simplifiedName = $"{meshGroup.name}{SimplifiedPostfix}.{material.name}";
+                ProcessCombineInstances(meshGroup, container, simplifiedName, material, combines);
             }
+
+            return container.gameObject;
         }
 
-        void ProcessCombineInstances(Transform meshGroup, string simplifiedName, Material material, List<CombineInstance> combines) {
+        void ProcessCombineInstances(Transform meshGroup, Transform container, string simplifiedName, Material material, List<CombineInstance> combines) {
             const int maxVertices = 65535;
             List<CombineInstance> currentCombines = new List<CombineInstance>();
             int currentVertexCount = 0;
             int partIndex = 1;
-            bool isMeshSplit = false;
 
             // If mesh would have more than 65535 vertices, split into multiple parts.
             foreach (var combine in combines) {
                 int vertexCount = combine.mesh.vertexCount;
                 if (currentVertexCount + vertexCount > maxVertices && currentCombines.Count > 0) {
-                    CreateMeshObject(meshGroup, $"{simplifiedName}_part{partIndex}", material, currentCombines);
+                    GameObject part = CreateMeshObject(meshGroup, $"{simplifiedName}_part{partIndex}", material, currentCombines);
+                    part.transform.SetParent(container, worldPositionStays: true);
                     partIndex++;
                     currentCombines.Clear();
                     currentVertexCount = 0;
-                    isMeshSplit = true;
                 }
                 currentCombines.Add(combine);
                 currentVertexCount += vertexCount;
             }
 
             if (currentCombines.Count > 0) {
+                bool isMeshSplit = partIndex > 1;
                 string meshName = isMeshSplit ? $"{simplifiedName}_part{partIndex}" : simplifiedName;
-                CreateMeshObject(meshGroup, meshName, material, currentCombines);
+                GameObject go = CreateMeshObject(meshGroup, meshName, material, currentCombines);
+                if (!isMeshSplit) {
+                    go.transform.SetParent(container, worldPositionStays: true);
+                }
             }
         }
 
-        void CreateMeshObject(Transform meshGroup, string gameObjectName, Material material, List<CombineInstance> combineInstances) {
+        GameObject CreateMeshObject(Transform meshGroup, string gameObjectName, Material material, List<CombineInstance> combineInstances) {
             Debug.Log($"Creating {gameObjectName}. {combineInstances.Count} submeshes", meshGroup);
-            GameObject go = new GameObject(gameObjectName, typeof(MeshFilter), typeof(MeshRenderer));
             Mesh mesh = new Mesh { name = gameObjectName };
             mesh.CombineMeshes(combineInstances.ToArray(), true, true, true);
             Unwrapping.GenerateSecondaryUVSet(mesh);
+            GameObject go = new GameObject(gameObjectName, typeof(MeshFilter), typeof(MeshRenderer));
             go.GetComponent<MeshFilter>().sharedMesh = mesh;
             go.GetComponent<MeshRenderer>().sharedMaterial = material;
             go.transform.SetParent(meshGroup.parent);
+            return go;
         }
 
         // Recursively collects mesh combines (CombineInstance) from children.
         void CollectMeshCombines(Transform t) {
-            if (t.name.Contains(_simplifiedPostfix)) return; // Skip simplified meshes.
+            if (t.name.Contains(SimplifiedPostfix)) return; // Skip simplified meshes.
 
             // If group is a LODGroup, use lowest detailed mesh.
             if (t.TryGetComponent(out LODGroup lodGroup)) {
