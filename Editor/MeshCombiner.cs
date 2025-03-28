@@ -1,25 +1,12 @@
 #if UNITY_EDITOR
+
 using System.Collections.Generic;
-using UnityEditor;
 using UnityEngine;
+using static Lotec.Utils.MeshCombinerConstants;
+using Unwrapping = UnityEditor.Unwrapping;
 
-namespace Lotec.Utils {
-    public static class MeshCombinerMenu {
-        static readonly MeshCombiner s_meshCombiner = new MeshCombiner();
-
-        [MenuItem("Tools/Lotec/Create simplified mesh")]
-        public static void CombineSelectedTransform() {
-            Transform container = Selection.activeTransform;
-            if (container == null) {
-                Debug.LogError("A transform must be selected, that contains the objects");
-                return;
-            }
-            s_meshCombiner.CreateSimplifiedMesh(container);
-        }
-    }
-
+namespace Lotec.Utils.editor {
     public class MeshCombiner {
-        public string SimplifiedPostfix { get; set; } = ".Simplified";
         readonly Dictionary<Material, List<CombineInstance>> _simplifiedMeshes = new();
 
         // Combine children meshes to one mesh.
