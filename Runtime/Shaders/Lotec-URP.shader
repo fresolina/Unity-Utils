@@ -106,6 +106,85 @@ Shader "Lotec/URP" {
                 TEXTURE2D(urp_ReflProbes_Atlas); SAMPLER(sampler_urp_ReflProbes_Atlas);
             CBUFFER_END
 
+            half3 GetNormal(v2f input)
+            {
+                half3 normal;
+                #ifdef _NORMALMAP
+                    // Convert tangent space normal from normal map to world space.
+                    half4 normSample = SAMPLE_TEXTURE2D(_BumpMap, sampler_BumpMap, input.uv);
+                    half3 normTex = UnpackNormal(normSample);
+                    half3x3 TBN = half3x3(normalize(input.tangent),
+                                          normalize(input.binormal),
+                                          normalize(input.normal));
+                    normal = normalize(mul(normTex, TBN));
+                #else
+                    // Use a default normal.
+                    normal = normalize(TransformObjectToWorldNormal(float3(0,0,1)));
+                #endif
+                return normal;
+            }
+
+            half GetRoughness(v2f input)
+            {
+                #ifdef _ROUGHNESSOVERRIDE_ON
+                    return _Roughness;
+                #else
+                    return SAMPLE_TEXTURE2D(_RoughnessMap, sampler_RoughnessMap, input.uv).a;
+                #endif
+            }
+
+            half3 GetAmbientDiffuse(v2f input, half3 normal)
+            {
+                #ifdef LIGHTMAP_ON
+                    // Diffuse ambient lighting from lightmap.
+                    return SampleLightmap(input.lightmapUV, normal);
+                #else
+                    // Diffuse ambient lighting from reflection probes.
+                    half3 ambientEnvironmentDiffuse = GlossyEnvironmentReflection(normal, input.positionWS, 1, 1, input.positionSS);
+                    // Sample light probes.
+                    half3 ambientProbeDiffuse = SampleSH(normal);
+                    return ambientEnvironmentDiffuse + ambientProbeDiffuse * 0.5h;
+                #endif
+            }
+
+            half3 GetRealtimeLighting(v2f input, half3 normal)
+            {
+                half3 lighting = half3(0, 0, 0);
+                #if defined(_REALTIMELIGHTING_ON) && defined(_ADDITIONAL_LIGHTS)
+                    uint pixelLightCount = GetAdditionalLightsCount();
+                    for (uint i = 0; i < pixelLightCount; ++i)
+                    {
+                        Light light = GetAdditionalLight(i, input.positionWS);
+                        float NdotL = dot(normal, normalize(light.direction));
+                        NdotL = (NdotL + 1.0) * 0.5;
+                        lighting += saturate(NdotL) * light.color * light.distanceAttenuation * light.shadowAttenuation;
+                    }
+                #endif
+                return lighting;
+            }
+
+            half3 GetEnvironmentReflection(v2f input, half3 directionToCamera, half3 normal, half roughness)
+            {
+                half3 ambientReflection = half3(0, 0, 0);
+                #ifdef _ENVIRONMENTREFLECTIONS_ON
+                    half baseReflectance;
+                    #ifdef _METALLICOVERRIDE_ON
+                        baseReflectance = _BaseReflectance;
+                    #else
+                        baseReflectance = SAMPLE_TEXTURE2D(_MetallicGlossMap, sampler_MetallicGlossMap, input.uv).r;
+                    #endif
+                    // Sample reflection (or sky) probe for reflections.
+                    half3 ReflectionVector = reflect(-directionToCamera, normal);
+                    half3 environmentReflection = GlossyEnvironmentReflection(ReflectionVector, input.positionWS, roughness, 1, input.positionSS);
+                    // Compute Fresnel factor using Schlick's approximation:
+                    // F = F₀ + (1 - F₀) * (1 - dot(N, V))⁵
+                    half F0 = baseReflectance;
+                    half Fresnel = F0 + (1 - F0) * pow(1 - saturate(dot(normal, directionToCamera)), 5);
+                    ambientReflection = environmentReflection * Fresnel;
+                #endif
+                return ambientReflection;
+            }
+
             v2f vert (appdata vertexData) {
                 v2f output = (v2f)0;
                 UNITY_SETUP_INSTANCE_ID(vertexData);
@@ -132,95 +211,20 @@ Shader "Lotec/URP" {
             half4 frag (v2f input) : SV_Target {
                 half3 cameraPosition = GetCameraPositionWS();
                 half3 directionToCamera = normalize(cameraPosition - input.positionWS);
-                // Sample albedo and extract glossiness from its alpha.
                 half4 albedo = SAMPLE_TEXTURE2D(_BaseMap, sampler_BaseMap, input.uv) * _BaseColor;
-                #ifdef _ROUGHNESSOVERRIDE_ON
-                    half roughness = _Roughness;
-                #else
-                    half roughness = SAMPLE_TEXTURE2D(_RoughnessMap, sampler_RoughnessMap, input.uv).a;
-                #endif
-
-                // --- Setup normal vector ---
-                half3 normal;
-                #ifdef _NORMALMAP
-                    // Convert tangent space normal from normal map to world space.
-                    half4 normSample = SAMPLE_TEXTURE2D(_BumpMap, sampler_BumpMap, input.uv);
-                    half3 normTex = UnpackNormal(normSample);
-                    half3x3 TBN = half3x3(normalize(input.tangent),
-                                          normalize(input.binormal),
-                                          normalize(input.normal));
-                    normal = normalize(mul(normTex, TBN));
-                #else
-                    // Use the vertex normal as the normal.
-                    normal = normalize(TransformObjectToWorldNormal(float3(0,0,1)));
-                #endif
+                half3 normal = GetNormal(input);
+                half roughness = GetRoughness(input);
 
                 // --- Baked light, GI and shadows from Lightmap ---
-                #ifdef LIGHTMAP_ON
-                    // Diffuse ambient lighting from lightmap.
-                    half3 ambientDiffuse = SampleLightmap(input.lightmapUV, normal);
-                #else
-                    // Diffuse ambient lighting from reflection probes.
-                    half3 ambientEnvironmentDiffuse = GlossyEnvironmentReflection(normal, input.positionWS, 1, 1, input.positionSS);
-
-                    // Sample light probes. TODO: Use 100% from environment if there is no light probe.
-                    half3 ambientProbeDiffuse = SampleSH(normal);
-                    half3 ambientDiffuse = ambientEnvironmentDiffuse + ambientProbeDiffuse * 0.5h;
-                #endif
+                half3 ambientDiffuse = GetAmbientDiffuse(input, normal);
                
                 // Additional lighting. Loop over the 4 additional lights.
-                half3 realtimeLighting = half3(0, 0, 0);
-                #if defined(_REALTIMELIGHTING_ON) && defined(_ADDITIONAL_LIGHTS)
-                    uint pixelLightCount = GetAdditionalLightsCount();
-                    for (uint i = 0; i < pixelLightCount; ++i) {
-                        Light light = GetAdditionalLight(i, input.positionWS);
-                        float NdotL = dot(normal, normalize(light.direction));
-                        NdotL = (NdotL + 1) * 0.5;
-                        realtimeLighting += saturate(NdotL) * light.color * light.distanceAttenuation * light.shadowAttenuation;
-
-                        // // Light source specular highlight.
-                        // // NOTE: specularity from main light is rarely useful. Better to use environment reflections.
-                        // half3 halfVecDir = normalize(light.direction + directionToCamera);
-                        // // If the half vector is parallel to the normal (1.0), then the specular is maximum.
-                        // half NdotH = saturate(dot(normal, halfVecDir));
-                        // half smoothness = 1 - roughness;
-                        // half glossExponent = lerp(1, 1000, smoothness);
-                        // half3 specular;
-                        // if (smoothness > 0.99 && NdotH > 0.9998) {
-                        //     specular = light.color;
-                        // } else {
-                        //     specular = pow(NdotH, glossExponent) * smoothness * light.color;
-                        // }
-                        // realtimeLighting += specular;
-                    }
-                #endif
+                half3 realtimeLighting = GetRealtimeLighting(input, normal);
 
                 // --- Specular ambient lighting - reflections
-                half3 ambientReflection = half3(0, 0, 0);
-                #ifdef _ENVIRONMENTREFLECTIONS_ON
-                    if (roughness < 0.999) {
-                        #ifdef _METALLICOVERRIDE_ON
-                            half baseReflectance = _BaseReflectance;
-                        #else
-                            half baseReflectance = SAMPLE_TEXTURE2D(_MetallicGlossMap, sampler_MetallicGlossMap, input.uv).r;
-                        #endif
-                        // --- Reflections from reflection probes ---
-                        // Sample reflection (or sky) probe for reflections.
-                        half3 ReflectionVector = reflect(-directionToCamera, normal);
-                        half3 environmentReflection = GlossyEnvironmentReflection(ReflectionVector, input.positionWS, roughness, 1, input.positionSS);
-
-                        // Compute Fresnel factor using Schlick's approximation:
-                        // F = F₀ + (1 - F₀) * (1 - dot(N, V))⁵
-                        half F0 = baseReflectance; // Normal values: 0.04 (non-metal) - 0.16 (metal).
-                        half Fresnel = F0 + (1 - F0) * pow(1 - saturate(dot(normal, directionToCamera)), 5);
-
-                        // Blend the environment reflection using the Fresnel factor.
-                        ambientReflection = environmentReflection * Fresnel;
-                    }
-                #endif
+                half3 ambientReflection = GetEnvironmentReflection(input, directionToCamera, normal, roughness);
 
                 // Combine lighting.
-                // half3 finalColor = albedo.rgb * (ambientDiffuse + ambientReflection);
                 half3 finalColor = albedo.rgb * ambientDiffuse + ambientReflection;
                 finalColor += realtimeLighting * albedo.rgb * roughness;
                 return half4(finalColor, 1);
