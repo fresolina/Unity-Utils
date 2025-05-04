@@ -9,12 +9,14 @@
 //      - Lägg dem nära väggar som ska lysas upp med dynamiskt ljus? Det dynamiska ljuset måste då även ha ett HDR-material matchande ljuset med rätt intensity och färg (kanske går scripta?)
 Shader "Lotec/URP" {
     Properties {
-        _BaseMap ("Albedo (RGB) Roughness (A < 1)", 2D) = "white" {}
+        _BaseMap ("Albedo", 2D) = "white" {}
         _BaseColor ("Color Tint", Color) = (1,1,1,1)
-        [Toggle] _RoughnessOverride("Roughness Override", Float) = 0
-        _Roughness ("Roughness", Range(0,1)) = 1.0
 
         _BumpMap ("Normal Map", 2D) = "bump" {}
+
+        _RoughnessMap ("Roughness (A)", 2D) = "white" {}
+        [Toggle] _RoughnessOverride("Roughness Override", Float) = 0
+        _Roughness ("Roughness", Range(0,1)) = 1.0
 
         _MetallicGlossMap("Metallic (R)", 2D) = "white" {}
         [Toggle] _MetallicOverride("Metallic Override (base reflectance)", Float) = 1
@@ -93,6 +95,7 @@ Shader "Lotec/URP" {
                 TEXTURE2D(_BaseMap); SAMPLER(sampler_BaseMap);
                 TEXTURE2D(_BumpMap); SAMPLER(sampler_BumpMap);
                 TEXTURE2D(_MetallicGlossMap); SAMPLER(sampler_MetallicGlossMap);
+                TEXTURE2D(_RoughnessMap); SAMPLER(sampler_RoughnessMap);
                 float4 _BaseMap_ST;
                 float4 _BaseColor;
                 half _Roughness;
@@ -134,7 +137,7 @@ Shader "Lotec/URP" {
                 #ifdef _ROUGHNESSOVERRIDE_ON
                     half roughness = _Roughness;
                 #else
-                    half roughness = albedo.a;
+                    half roughness = SAMPLE_TEXTURE2D(_RoughnessMap, sampler_RoughnessMap, input.uv).a;
                 #endif
 
                 // --- Setup normal vector ---
