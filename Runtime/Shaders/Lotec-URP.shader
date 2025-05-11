@@ -1,6 +1,3 @@
-// TODO: Performance-testa metallic map, andra maps. Stöd andra maps?
-// * Color Tint override toggle
-// * Separat map för roughness. tvinga ingen att använda albedo.
 // Kanske:
 // * Support realtime Main light.
 // * Support additional light specular highlight.
@@ -21,6 +18,8 @@ Shader "Lotec/URP" {
         _MetallicGlossMap("Metallic (R)", 2D) = "white" {}
         [Toggle] _MetallicOverride("Metallic Override (base reflectance)", Float) = 1
         _BaseReflectance ("Metallic (base reflectance)", Range(0,1)) = 0.04
+
+        _OcclusionMap ("Ambient Occlusion (A)", 2D) = "white" {}
 
         // Toggle stuff on/off.
         [Toggle] _EnvironmentReflections("Specular Environment Reflections", Float) = 1
@@ -90,12 +89,12 @@ Shader "Lotec/URP" {
                 UNITY_VERTEX_OUTPUT_STEREO
             };
 
-
             CBUFFER_START(UnityPerMaterial)
                 TEXTURE2D(_BaseMap); SAMPLER(sampler_BaseMap);
                 TEXTURE2D(_BumpMap); SAMPLER(sampler_BumpMap);
                 TEXTURE2D(_MetallicGlossMap); SAMPLER(sampler_MetallicGlossMap);
                 TEXTURE2D(_RoughnessMap); SAMPLER(sampler_RoughnessMap);
+                TEXTURE2D(_OcclusionMap); SAMPLER(sampler_OcclusionMap);
                 float4 _BaseMap_ST;
                 float4 _BaseColor;
                 half _Roughness;
@@ -217,13 +216,17 @@ Shader "Lotec/URP" {
 
                 // --- Baked light, GI and shadows from Lightmap ---
                 half3 ambientDiffuse = GetAmbientDiffuse(input, normal);
-               
+
                 // Additional lighting. Loop over the 4 additional lights.
                 half3 realtimeLighting = GetRealtimeLighting(input, normal);
 
                 // --- Specular ambient lighting - reflections
                 half3 ambientReflection = GetEnvironmentReflection(input, directionToCamera, normal, roughness);
 
+                // Apply Ambient Occlusion 
+                half occlusion = SAMPLE_TEXTURE2D(_OcclusionMap, sampler_OcclusionMap, input.uv).a;
+                ambientReflection *= occlusion;
+                
                 // Combine lighting.
                 half3 finalColor = albedo.rgb * ambientDiffuse + ambientReflection;
                 finalColor += realtimeLighting * albedo.rgb * roughness;
