@@ -1,3 +1,5 @@
+// Performance test:
+// * Typ SimpleLit, men med environment reflections.
 // Kanske:
 // * Support realtime Main light.
 // * Support additional light specular highlight.
