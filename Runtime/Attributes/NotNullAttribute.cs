@@ -1,7 +1,6 @@
 using System;
 using System.Reflection;
 using UnityEngine;
-using UnityEngine.Assertions;
 
 namespace Lotec.Utils.Attributes {
     /// <summary>
@@ -23,7 +22,12 @@ namespace Lotec.Utils.Attributes {
                 NotNullAttribute[] attributes = (NotNullAttribute[])field.GetCustomAttributes(typeof(NotNullAttribute), inherit: true);
 
                 if (attributes.Length > 0) {
-                    Assert.IsNotNull(field.GetValue(obj), "Required reference missing");
+                    var value = field.GetValue(obj);
+                    // Assert.IsNotNull(value, message);
+                    if (value == null) {
+                        string message = $"{targetType.Name}: '{field.Name}' ({field.FieldType.Name}) missing.";
+                        Debug.LogError(message, obj as UnityEngine.Object);
+                    }
                 }
             }
         }
