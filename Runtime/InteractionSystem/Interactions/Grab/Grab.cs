@@ -9,7 +9,6 @@ namespace Lotec.Interactions {
         // Player can only grab the item if they have no item in hand.
         public override bool IsValid => GrabManager.Instance.HeldItem == null;
         public override void OnStartInteraction() {
-            ShowMessage($"Grabbing {_interactable.Name}...");
             GrabManager.Instance.Grab(_interactable.GetComponent<Rigidbody>());
         }
     }

@@ -10,36 +10,32 @@ namespace Lotec.Interactions {
         [SerializeField, NotNull] InputActionReference _dropAction;
         [SerializeField, NotNull] GrabManager _grabManager;
 
-        void EnableAction(InputAction action) {
-            if (!action.actionMap.enabled)
-                action.actionMap.Enable();
-            action.Enable();
-        }
-
         void OnEnable() {
-            EnableAction(_usePrimaryAction.action);
+            _usePrimaryAction.action.Enable();
             _usePrimaryAction.action.performed += OnUsePrimary;
 
-            EnableAction(_useSecondaryAction.action);
+            _useSecondaryAction.action.Enable();
             _useSecondaryAction.action.performed += OnUseSecondary;
 
-            EnableAction(_dropAction.action);
+            _dropAction.action.Enable();
             _dropAction.action.performed += OnDrop;
         }
 
         void OnDisable() {
             _usePrimaryAction.action.performed -= OnUsePrimary;
+            _usePrimaryAction.action.Disable();
+
             _useSecondaryAction.action.performed -= OnUseSecondary;
+            _useSecondaryAction.action.Disable();
+
             _dropAction.action.performed -= OnDrop;
+            _dropAction.action.Disable();
         }
 
-        void OnUsePrimary(InputAction.CallbackContext ctx) =>
-            _grabManager.UseItemPrimaryAction();
+        void OnUsePrimary(InputAction.CallbackContext _) => _grabManager.UseItemPrimaryAction();
 
-        void OnUseSecondary(InputAction.CallbackContext ctx) =>
-            _grabManager.UseItemSecondaryAction();
+        void OnUseSecondary(InputAction.CallbackContext _) => _grabManager.UseItemSecondaryAction();
 
-        void OnDrop(InputAction.CallbackContext ctx) =>
-            _grabManager.Drop();
+        void OnDrop(InputAction.CallbackContext _) => _grabManager.Drop();
     }
 }
