@@ -1,11 +1,14 @@
+using Lotec.Interactions;
 using Lotec.Utils;
+using Lotec.Utils.Attributes;
 using UnityEngine;
 
 public class GrabManager : MonoBehaviour2 {
     public static GrabManager Instance { get; private set; }
 
     [Tooltip("The player's hand position where items will be held.")]
-    [SerializeField] Transform _handTransform;
+    [SerializeField, NotNull] Transform _handTransform;
+    [SerializeField] IInteractionSystem _interactionSystem;
     Rigidbody _heldItem;
 
     public GameObject HeldItem => _heldItem == null ? null : _heldItem.gameObject;
@@ -46,6 +49,7 @@ public class GrabManager : MonoBehaviour2 {
         _heldItem.useGravity = true;
         _heldItem.transform.SetParent(null);
         _heldItem = null;
+        _interactionSystem?.UpdateInteractions();
     }
 
     internal void UseItemSecondaryAction() {
