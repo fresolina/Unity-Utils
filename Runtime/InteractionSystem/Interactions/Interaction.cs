@@ -18,10 +18,8 @@ namespace Lotec.Interactions {
         }
 #endif
 
-        public virtual bool IsInteractable => true;
-        public virtual bool CanInteractWith(Interactable itemInHand) => itemInHand == null;
-        public abstract void OnStartInteraction(IInteractionSystem system, Interactable withInteractable);
-        public virtual void OnStartInteraction() { }
+        public virtual bool IsValid => true;
+        public abstract void OnStartInteraction();
         public virtual void OnCancelInteraction() { }
 
         // TODO: IInteractionSystem.ShowMessage()

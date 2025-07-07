@@ -1,4 +1,5 @@
 using System.Text;
+using Lotec.Interactions;
 using Lotec.Utils;
 using Lotec.Utils.Attributes;
 using UnityEngine;
@@ -42,14 +43,14 @@ namespace Lotec.Interactions.GUI {
             _interactionInfoHandler.SetText(_stringBuilder.ToString());
         }
 
-        void AddInteraction(InteractionMap interactionMap, string prefix) {
+        void AddInteraction(IInteraction interaction, string prefix) {
             if (_stringBuilder.Length > 0) {
                 _stringBuilder.Append("\n");
             }
             if (_showButtonPrefix) {
                 _stringBuilder.Append($"{prefix}: ");
             }
-            _stringBuilder.Append($"{interactionMap.Interaction.InteractionName}");
+            _stringBuilder.Append($"{interaction.InteractionName}");
         }
 
         void SetInteractableInfos() {

@@ -19,7 +19,7 @@ namespace Lotec.Interactions {
 
         // InteractableInSight, used by UI.
         public Interactable ItemInWorld => _sensor.SensorObject;
-        public List<InteractionMap> ValidInteractions { get; } = new List<InteractionMap>();
+        public List<IInteraction> ValidInteractions { get; } = new List<IInteraction>();
         /// <summary>
         /// Event triggers when interactable in sight changes. Useful for UI to show/hide info.
         /// </summary>
@@ -36,8 +36,8 @@ namespace Lotec.Interactions {
         public void Interact(int index) {
             if (index >= ValidInteractions.Count) return;
 
-            _interaction = ValidInteractions[index].Interaction;
-            _interaction.OnStartInteraction(this, ValidInteractions[index].Item);
+            _interaction = ValidInteractions[index];
+            _interaction.OnStartInteraction();
             UpdateInteractions();
         }
 
@@ -63,22 +63,17 @@ namespace Lotec.Interactions {
             ValidInteractions.Clear();
             if (_sensor.SensorObject == null) return;
 
-            // Check with items in hands. (backpack is always last "in hand" in HandsInventory)
-            // for (int i = 0; i < _hands.Items.Count; i++) {
-            //     AddValidInteractions(_hands.Items[i], ValidInteractions);
-            // }
-            // Check without an item in hand.
-            AddValidInteractions(null, ValidInteractions);
+            AddValidInteractions(ValidInteractions);
         }
 
-        void AddValidInteractions(Interactable itemInHand, List<InteractionMap> validInteractions) {
+        void AddValidInteractions(List<IInteraction> validInteractions) {
             IInteraction[] interactions = _sensor.SensorObject.Interactions;
             for (int i = 0; i < interactions.Length; i++) {
                 IInteraction interaction = interactions[i];
                 if (!((MonoBehaviour)interaction).enabled) continue; // Skip disabled interactions.
 
-                if (interaction.CanInteractWith(itemInHand)) {
-                    validInteractions.Add(new InteractionMap { Interaction = interaction, Item = itemInHand });
+                if (interaction.IsValid) {
+                    validInteractions.Add(interaction);
                 }
             }
         }

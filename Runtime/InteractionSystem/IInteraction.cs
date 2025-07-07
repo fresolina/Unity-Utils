@@ -5,10 +5,7 @@ namespace Lotec.Interactions {
     public interface IInteraction {
         string InteractionName { get; }
         void OnStartInteraction();
-        void OnStartInteraction(IInteractionSystem system, Interactable withInteractable);
-        void OnCancelInteraction() { }
-
-        bool CanInteractWith(Interactable itemInHand);
-        bool IsInteractable { get; }
+        void OnCancelInteraction() { } // optional
+        bool IsValid { get; }
     }
 }

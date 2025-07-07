@@ -7,6 +7,8 @@ namespace Lotec.Utils.Triggers
     public interface IConditionHandler
     {
         public bool CheckCondition(ICondition condition, Component target = null, Component source = null);
+        // TODO: Ta bort CheckConditions. Skapa en Condition som heter AllConditionsTrue som gör detta.
+        //       Sen en AnyConditionTrue som returnerar true om någon av villkoren är true.
         public bool CheckConditions(ICondition[] conditions, Component target = null, Component source = null)
         {
             for (int i = 0; i < conditions.Length; i++)

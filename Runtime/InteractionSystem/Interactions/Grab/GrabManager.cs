@@ -7,7 +7,7 @@ public class GrabManager : MonoBehaviour2 {
 
     [Tooltip("The player's hand position where items will be held.")]
     [SerializeField] private Transform _handTransform;
-    public Transform HeldItem => _heldItem == null ? null : _heldItem.transform;
+    public GameObject HeldItem => _heldItem == null ? null : _heldItem.gameObject;
     private Rigidbody _heldItem;
 
     void Awake() {
