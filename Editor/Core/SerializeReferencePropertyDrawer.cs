@@ -5,7 +5,9 @@ using System.Linq;
 using System.Reflection;
 using System.Text.RegularExpressions;
 using UnityEditor;
+using UnityEditor.UIElements;
 using UnityEngine;
+using UnityEngine.UIElements;
 
 namespace Lotec.Utils.Interfaces.Editor {
     public static class TypeExtensions {
@@ -68,54 +70,38 @@ namespace Lotec.Utils.Interfaces.Editor {
         }
     }
 
-    // T == interfaceType
-    public abstract class SerializeReferenceDrawer<T> : PropertyDrawer {
-        readonly TypeMap[] _typeInfos;
+    public class SerializeReferenceElement<T> : VisualElement {
+        public SerializeReferenceElement(SerializedProperty property) {
+            SerializedObject serializedObject = property.serializedObject;
+            style.flexDirection = FlexDirection.Row;
+            string typeName = property.managedReferenceValue?.GetType().ToHumanizedString(typeof(T)) ?? typeof(T).Name;
+            var propField = new PropertyField(property, $"{property.displayName} ({typeName})");
+            propField.style.flexGrow = 1;
+            Add(propField);
 
-        public SerializeReferenceDrawer() {
-            _typeInfos = TypeHelper.s_typesFromInterfaceType[typeof(T)]
-                .Select(t => new TypeMap { Type = t, Name = t.Name, HumanizedName = t.ToHumanizedString(typeof(T)) })
-                .ToArray();
-        }
-
-        public override void OnGUI(Rect position, SerializedProperty property, GUIContent label) {
-            bool showCreateButton = false;
-            try {
-                showCreateButton = property.managedReferenceValue == null;
-                if (!showCreateButton) {
-                    label.text = property.managedReferenceValue.GetType().ToHumanizedString(typeof(T));
-                }
-            } catch (InvalidOperationException) {
-                Debug.LogError("InvalidOperationException");
-                // property.managedReferenceValue only exists on SerializeReference property.
-            }
-
-            if (!showCreateButton) {
-                EditorGUI.PropertyField(position, property, label, true);
-                return;
-            }
-
-            // Create a dropdown button
-            if (EditorGUI.DropdownButton(position, new GUIContent("Create Type"), FocusType.Passive)) {
-                GenericMenu menu = new GenericMenu();
-                for (int i = 0; i < _typeInfos.Length; i++) {
-                    TypeMap typeInfo = _typeInfos[i];
-                    menu.AddItem(new GUIContent(typeInfo.HumanizedName), false, () => {
-                        Type currentType = property.managedReferenceValue?.GetType();
-                        if (currentType == typeInfo.Type) return;
-
-                        // Create a new instance of the selected type
-                        object instance = Activator.CreateInstance(typeInfo.Type);
-                        property.managedReferenceValue = instance;
+            if (property.managedReferenceValue == null) {
+                // "Create Type" dropdown menu
+                var createMenu = new ToolbarMenu { text = "Create Type" };
+                foreach (var typeInfo in TypeHelper.s_typesFromInterfaceType[typeof(T)]) {
+                    string humanName = typeInfo.ToHumanizedString(typeof(T));
+                    createMenu.menu.AppendAction(humanName, _ => {
+                        property.managedReferenceValue = Activator.CreateInstance(typeInfo);
                         property.isExpanded = true;
-                        property.serializedObject.ApplyModifiedProperties();
+                        serializedObject.ApplyModifiedProperties();
                     });
                 }
-                menu.ShowAsContext();
+                Add(createMenu);
+            } else {
+                // "Clear" button to remove the managed reference
+                var clearBtn = new Button(() => {
+                    property.managedReferenceValue = null;
+                    property.isExpanded = false;
+                    serializedObject.ApplyModifiedProperties();
+                    Clear();
+                }) { text = "X" };
+                Add(clearBtn);
             }
         }
-
-        public override float GetPropertyHeight(SerializedProperty property, GUIContent label) => EditorGUI.GetPropertyHeight(property, true);
     }
 
     [InitializeOnLoad]
