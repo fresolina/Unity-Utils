@@ -15,7 +15,7 @@ namespace Lotec.Utils.Triggers.Editor {
     [CustomPropertyDrawer(typeof(IAction), true)]
     public class IActionDrawer : PropertyDrawer {
         public override VisualElement CreatePropertyGUI(SerializedProperty property) {
-            return new SerializeReferenceElement<ICondition>(property);
+            return new SerializeReferenceElement<IAction>(property);
         }
     }
 
