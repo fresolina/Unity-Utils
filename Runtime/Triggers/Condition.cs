@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using Lotec.Utils.Interfaces;
 using UnityEngine;
 
@@ -42,7 +43,7 @@ namespace Lotec.Utils.Triggers {
         /// <summary>
         /// Execute the action.
         /// </summary>
-        void Execute();
+        IEnumerator Execute();
     }
 
     [Serializable, NoSerializeInterface] // TODO: Lägg in att aldrig serialisera abstracts
@@ -84,10 +85,10 @@ namespace Lotec.Utils.Triggers {
     public class MultipleAction : IAction {
         [field: SerializeReference] public IAction[] Actions { get; private set; }
 
-        public void Execute() {
+        public IEnumerator Execute() {
             for (int i = 0; i < Actions.Length; i++) {
                 IAction action = Actions[i];
-                action.Execute();
+                yield return action.Execute();
             }
         }
     }
