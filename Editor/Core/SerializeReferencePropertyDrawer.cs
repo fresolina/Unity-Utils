@@ -135,5 +135,71 @@ namespace Lotec.Utils.Interfaces.Editor {
         public string Name;
         public string HumanizedName;
     }
+
+    /// <summary>
+    /// Generic property drawer for SerializeReference fields that supports both UI Toolkit and IMGUI.
+    /// To create a property drawer for a specific interface, simply inherit from this class:
+    /// [CustomPropertyDrawer(typeof(IYourInterface), true)]
+    /// public class IYourInterfaceDrawer : SerializeReferenceDrawer<IYourInterface> { }
+    /// </summary>
+    /// <typeparam name="T">The interface type to draw</typeparam>
+    public abstract class SerializeReferenceDrawer<T> : PropertyDrawer {
+        // UI Toolkit implementation
+        public override VisualElement CreatePropertyGUI(SerializedProperty property) {
+            return new SerializeReferenceElement<T>(property);
+        }
+
+        // IMGUI implementation
+        public override void OnGUI(Rect position, SerializedProperty property, GUIContent label) {
+            DrawSerializeReferenceField(position, property, label);
+        }
+
+        public override float GetPropertyHeight(SerializedProperty property, GUIContent label) {
+            return EditorGUI.GetPropertyHeight(property, label, true);
+        }
+
+        private void DrawSerializeReferenceField(Rect position, SerializedProperty property, GUIContent label) {
+            var buttonWidth = 80f;
+            var propertyRect = new Rect(position.x, position.y, position.width - buttonWidth - 5f, position.height);
+            var buttonRect = new Rect(position.x + position.width - buttonWidth, position.y, buttonWidth, EditorGUIUtility.singleLineHeight);
+
+            // Draw the property field
+            string typeName = property.managedReferenceValue?.GetType().ToHumanizedString(typeof(T)) ?? typeof(T).Name;
+            var labelWithType = new GUIContent($"{label.text} ({typeName})", label.tooltip);
+
+            EditorGUI.PropertyField(propertyRect, property, labelWithType, true);
+
+            // Draw create/clear button
+            if (property.managedReferenceValue == null) {
+                if (GUI.Button(buttonRect, "Create")) {
+                    ShowCreateMenu(property);
+                }
+            } else {
+                if (GUI.Button(buttonRect, "Clear")) {
+                    property.managedReferenceValue = null;
+                    property.serializedObject.ApplyModifiedProperties();
+                }
+            }
+        }
+
+        private void ShowCreateMenu(SerializedProperty property) {
+            var menu = new GenericMenu();
+
+            if (TypeHelper.s_typesFromInterfaceType.ContainsKey(typeof(T))) {
+                foreach (var typeInfo in TypeHelper.s_typesFromInterfaceType[typeof(T)]) {
+                    string humanName = typeInfo.ToHumanizedString(typeof(T));
+                    menu.AddItem(new GUIContent(humanName), false, () => {
+                        property.managedReferenceValue = System.Activator.CreateInstance(typeInfo);
+                        property.isExpanded = true;
+                        property.serializedObject.ApplyModifiedProperties();
+                    });
+                }
+            }
+
+            if (menu.GetItemCount() > 0) {
+                menu.ShowAsContext();
+            }
+        }
+    }
 }
 #endif
