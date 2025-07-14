@@ -134,6 +134,7 @@ namespace Lotec.Utils {
                 if (!string.IsNullOrEmpty(tooltipText)) {
                     propertyField.tooltip = tooltipText;
                 }
+
                 container.Add(propertyField);
             }
         }
@@ -166,16 +167,6 @@ namespace Lotec.Utils {
                 propertyField.tooltip = tooltipAttr.tooltip;
             }
 
-            // Handle NotNull attribute with red border
-            bool hasNotNull = System.Attribute.IsDefined(field, typeof(Attributes.NotNullAttribute));
-            if (hasNotNull) {
-                propertyField.RegisterCallback<ChangeEvent<UnityEngine.Object>>((evt) => {
-                    UpdateNotNullBorder(propertyField, evt.newValue);
-                });
-                // Set initial border state
-                UpdateNotNullBorder(propertyField, objectRefProp.objectReferenceValue);
-            }
-
             // Handle value changes for interface validation
             propertyField.RegisterCallback<ChangeEvent<UnityEngine.Object>>((evt) => {
                 Object newValue = evt.newValue;
@@ -188,27 +179,6 @@ namespace Lotec.Utils {
             });
 
             container.Add(propertyField);
-        }
-
-        /// <summary>
-        /// Updates the red border for NotNull fields.
-        /// </summary>
-        private void UpdateNotNullBorder(VisualElement element, UnityEngine.Object value) {
-            if (value == null) {
-                element.style.borderLeftColor = Color.red;
-                element.style.borderRightColor = Color.red;
-                element.style.borderTopColor = Color.red;
-                element.style.borderBottomColor = Color.red;
-                element.style.borderLeftWidth = 2;
-                element.style.borderRightWidth = 2;
-                element.style.borderTopWidth = 2;
-                element.style.borderBottomWidth = 2;
-            } else {
-                element.style.borderLeftWidth = 0;
-                element.style.borderRightWidth = 0;
-                element.style.borderTopWidth = 0;
-                element.style.borderBottomWidth = 0;
-            }
         }
 
         /// <summary>

@@ -81,7 +81,7 @@ namespace Lotec.Utils.Interfaces.Editor {
 
             if (property.managedReferenceValue == null) {
                 // "Create Type" dropdown menu
-                var createMenu = new ToolbarMenu { text = "Create Type" };
+                var createMenu = new ToolbarMenu { text = "Create" };
                 foreach (var typeInfo in TypeHelper.s_typesFromInterfaceType[typeof(T)]) {
                     string humanName = typeInfo.ToHumanizedString(typeof(T));
                     createMenu.menu.AppendAction(humanName, _ => {
