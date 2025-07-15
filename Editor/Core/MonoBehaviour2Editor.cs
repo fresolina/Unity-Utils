@@ -242,30 +242,8 @@ namespace Lotec.Utils {
             // Get all public methods from the target's type
             var publicMethods = target.GetType().GetMethods(BindingFlags.Public | BindingFlags.Instance);
 
-            // Filter out inherited methods from MonoBehaviour, MonoBehaviour2, and Object
-            var debugMethods = new List<MethodInfo>();
-            foreach (var method in publicMethods) {
-                // Skip methods inherited from base Unity classes
-                if (method.DeclaringType == typeof(MonoBehaviour) ||
-                    method.DeclaringType == typeof(MonoBehaviour2) ||
-                    method.DeclaringType == typeof(Component) ||
-                    method.DeclaringType == typeof(UnityEngine.Object) ||
-                    method.DeclaringType == typeof(object)) {
-                    continue;
-                }
-
-                // Skip property getters/setters and special methods
-                if (method.IsSpecialName || method.Name.StartsWith("get_") || method.Name.StartsWith("set_")) {
-                    continue;
-                }
-
-                // Skip ISerializationCallbackReceiver methods that are already in MonoBehaviour2
-                if (method.Name == "OnBeforeSerialize" || method.Name == "OnAfterDeserialize") {
-                    continue;
-                }
-
-                debugMethods.Add(method);
-            }
+            // Filter out inherited methods and methods with parameters
+            List<MethodInfo> debugMethods = FilterMethods(publicMethods);
 
             // Create debug buttons section if there are any methods
             if (debugMethods.Count <= 0) return;
@@ -289,25 +267,48 @@ namespace Lotec.Utils {
             foreach (var method in debugMethods) {
                 var button = new Button(() => {
                     try {
-                        // Check if method has parameters
-                        if (method.GetParameters().Length == 0) {
-                            method.Invoke(target, null);
-                            Debug.Log($"Called {method.Name}() on {target.name}");
-                        } else {
-                            Debug.LogWarning($"Cannot call {method.Name}() - method has parameters");
-                        }
+                        method.Invoke(target, null);
+                        Debug.Log($"Called {method.Name}() on {target.name}");
                     } catch (System.Exception ex) {
                         Debug.LogError($"Error calling {method.Name}(): {ex.Message}");
                     }
                 });
 
-                button.text = $"Call {ObjectNames.NicifyVariableName(method.Name)}()";
+                button.text = $"{ObjectNames.NicifyVariableName(method.Name)}()";
                 button.style.marginBottom = 2;
                 debugContainer.Add(button);
             }
 
             debugFoldout.Add(debugContainer);
             container.Add(debugFoldout);
+        }
+
+        private static List<MethodInfo> FilterMethods(MethodInfo[] publicMethods) {
+            var debugMethods = new List<MethodInfo>();
+            foreach (var method in publicMethods) {
+                // Skip methods inherited from base Unity classes
+                if (method.DeclaringType == typeof(MonoBehaviour) ||
+                    method.DeclaringType == typeof(MonoBehaviour2) ||
+                    method.DeclaringType == typeof(Component) ||
+                    method.DeclaringType == typeof(UnityEngine.Object) ||
+                    method.DeclaringType == typeof(object)) {
+                    continue;
+                }
+
+                // Skip property getters/setters and special methods
+                if (method.IsSpecialName || method.Name.StartsWith("get_") || method.Name.StartsWith("set_")) {
+                    continue;
+                }
+
+                // Skip methods with parameters
+                if (method.GetParameters().Length > 0) {
+                    continue;
+                }
+
+                debugMethods.Add(method);
+            }
+
+            return debugMethods;
         }
     }
 }
