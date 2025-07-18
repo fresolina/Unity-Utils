@@ -285,7 +285,8 @@ Shader "Lotec/URP" {
                 // Apply Ambient Occlusion 
                 half occlusion = SAMPLE_TEXTURE2D(_OcclusionMap, sampler_OcclusionMap, input.uv).a;
                 ambientReflection *= occlusion;
-                
+                ambientDiffuse *= occlusion;
+
                 // Calculate final color based on glass mode
                 half3 finalColor;
                 #ifdef _GLASSMODE_ON
