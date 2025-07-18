@@ -11,7 +11,7 @@ namespace Lotec.Utils {
     /// Custom Editor for MonoBehaviour2 to handle interface fields and tooltips while preserving default inspector behavior.
     /// </summary>
     [CustomEditor(typeof(MonoBehaviour2), true)]
-    public class MonoBehaviour2Editor : Editor {
+    public class MonoBehaviour2Editor : UnityEditor.Editor {
         // Dictionary to map interface field names to their corresponding FieldInfo
         private Dictionary<string, FieldInfo> _interfaceFieldMap;
 
