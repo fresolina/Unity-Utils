@@ -1,12 +1,11 @@
 #if UNITY_EDITOR
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
-using System.Text.RegularExpressions;
 using Lotec.Utils.Attributes;
 using UnityEditor;
+using UnityEditor.UIElements;
 using UnityEngine;
 using UnityEngine.UIElements;
 
@@ -14,365 +13,189 @@ namespace Lotec.Utils.Editor {
     [CustomPropertyDrawer(typeof(OptionsAttribute))]
     public class OptionsPropertyDrawer : PropertyDrawer {
 
+        private static readonly HashSet<SerializedPropertyType> s_supportedTypes = new() {
+            SerializedPropertyType.String,
+            SerializedPropertyType.Integer,
+            SerializedPropertyType.Float
+        };
+
         public override VisualElement CreatePropertyGUI(SerializedProperty property) {
             var optionsAttribute = (OptionsAttribute)attribute;
             var targetObject = property.serializedObject.targetObject;
+            var propertyField = new PropertyField(property);
 
-            // Create the root container
-            var container = new VisualElement();
-            container.style.flexDirection = FlexDirection.Row;
-            container.style.alignItems = Align.Center;
+            // Validate property type
+            if (!s_supportedTypes.Contains(property.propertyType)) {
+                return CreateErrorField(property, "Options attribute only supports string, int, and float properties");
+            }
 
-            // Create the label
-            var label = new Label(property.displayName);
-            label.style.minWidth = EditorGUIUtility.labelWidth;
-            label.style.unityTextAlign = TextAnchor.MiddleLeft;
-            container.Add(label);
-
-            // Get the method that provides the options
+            // Get options method and validate
             var method = GetMethod(targetObject, optionsAttribute.MethodName);
             if (method == null) {
-                var errorLabel = new Label($"Method '{optionsAttribute.MethodName}' not found.");
-                errorLabel.style.color = Color.red;
-                errorLabel.style.flexGrow = 1;
-                container.Add(errorLabel);
-                return container;
+                return CreateErrorField(property, $"Method '{optionsAttribute.MethodName}' not found");
             }
 
-            // Get the options from the method
-            var optionsData = GetOptionsData(targetObject, method, property);
-            if (optionsData == null || optionsData.options.Length == 0) {
-                var errorLabel = new Label("No options available from method.");
-                errorLabel.style.color = Color.red;
-                errorLabel.style.flexGrow = 1;
-                container.Add(errorLabel);
-                return container;
+            var options = GetOptions(targetObject, method);
+            if (options == null || options.Length == 0) {
+                return CreateErrorField(property, "No options available from method");
             }
 
-            // Create the appropriate UI element based on property type
-            VisualElement fieldElement = property.propertyType switch {
-                SerializedPropertyType.String => CreateStringDropdown(property, optionsData),
-                SerializedPropertyType.Integer => CreateIntDropdown(property, optionsData),
-                SerializedPropertyType.Float => CreateFloatDropdown(property, optionsData),
-                SerializedPropertyType.Enum => CreateEnumDropdown(property, optionsData),
-                SerializedPropertyType.ObjectReference => CreateObjectDropdown(property, optionsData),
-                SerializedPropertyType.Generic => CreateGenericDropdown(property, optionsData),
-                _ => CreateUnsupportedField(property)
-            };
+            // Create dropdown and schedule replacement
+            var dropdown = CreateDropdown(property, options);
+            propertyField.schedule.Execute(() => ReplaceInputField(propertyField, dropdown));
 
-            fieldElement.style.flexGrow = 1;
-            container.Add(fieldElement);
+            return propertyField;
+        }
+
+        private VisualElement CreateErrorField(SerializedProperty property, string errorMessage) {
+            // Create a container that mimics the PropertyField layout
+            var container = new VisualElement();
+            container.AddToClassList("unity-base-field");
+            container.AddToClassList("unity-property-field");
+
+            // Add the property label using the display name from SerializedProperty
+            var label = new Label(property.displayName);
+            label.AddToClassList("unity-base-field__label");
+            label.AddToClassList("unity-property-field__label");
+            container.Add(label);
+
+            // Add the error message as the input area
+            var errorLabel = new Label(errorMessage);
+            errorLabel.AddToClassList("unity-base-field__input");
+            errorLabel.style.color = Color.red;
+            container.Add(errorLabel);
 
             return container;
         }
 
-        private DropdownField CreateStringDropdown(SerializedProperty property, OptionsData optionsData) {
+        private DropdownField CreateDropdown(SerializedProperty property, object[] options) {
             var dropdown = new DropdownField();
+            var stringOptions = options.Select(opt => opt?.ToString() ?? "null").ToArray();
 
-            // Set up choices
-            var choices = optionsData.displayNames.ToList();
-            dropdown.choices = choices;
+            // Get current value and find selection index
+            var (currentValue, selectedIndex) = property.propertyType switch {
+                SerializedPropertyType.String => GetStringSelection(property.stringValue, options, stringOptions),
+                SerializedPropertyType.Integer => GetIntSelection(property.intValue, options, stringOptions),
+                SerializedPropertyType.Float => GetFloatSelection(property.floatValue, options, stringOptions),
+                _ => throw new InvalidOperationException($"Unsupported property type: {property.propertyType}")
+            };
 
-            // Find current selection
-            string currentValue = property.stringValue;
-            int selectedIndex = Array.FindIndex(optionsData.options, opt => opt?.ToString() == currentValue);
+            // Setup dropdown choices and selection
+            SetupDropdownChoices(dropdown, stringOptions, currentValue, selectedIndex);
+
+            // Register value change callback
+            dropdown.RegisterValueChangedCallback(evt => HandleValueChange(property, options, evt.newValue, currentValue));
+
+            return dropdown;
+        }
+
+        private (string currentValue, int selectedIndex) GetStringSelection(string value, object[] options, string[] stringOptions) {
+            var selectedIndex = Array.FindIndex(stringOptions, opt => opt == value);
+            return (value, selectedIndex);
+        }
+
+        private (string currentValue, int selectedIndex) GetIntSelection(int value, object[] options, string[] stringOptions) {
+            var selectedIndex = Array.FindIndex(options, opt =>
+                opt != null && int.TryParse(opt.ToString(), out int val) && val == value);
+            return (value.ToString(), selectedIndex);
+        }
+
+        private (string currentValue, int selectedIndex) GetFloatSelection(float value, object[] options, string[] stringOptions) {
+            var selectedIndex = Array.FindIndex(options, opt =>
+                opt != null && float.TryParse(opt.ToString(), out float val) && Mathf.Approximately(val, value));
+            return (value.ToString(), selectedIndex);
+        }
+
+        private void SetupDropdownChoices(DropdownField dropdown, string[] stringOptions, string currentValue, int selectedIndex) {
+            var choices = stringOptions.ToList();
 
             // Handle current value not in options
             if (selectedIndex < 0 && !string.IsNullOrEmpty(currentValue)) {
                 choices.Insert(0, $"{currentValue} (current)");
-                dropdown.choices = choices;
                 selectedIndex = 0;
             } else if (selectedIndex < 0) {
                 selectedIndex = 0;
             }
 
-            // Set current value
+            dropdown.choices = choices;
+
+            // Set selected index safely
             if (selectedIndex < dropdown.choices.Count) {
                 dropdown.index = selectedIndex;
             }
-
-            // Handle value changes
-            dropdown.RegisterValueChangedCallback(evt => {
-                int newIndex = dropdown.choices.IndexOf(evt.newValue);
-                if (newIndex >= 0 && newIndex < optionsData.options.Length) {
-                    property.stringValue = optionsData.options[newIndex]?.ToString() ?? "";
-                    property.serializedObject.ApplyModifiedProperties();
-                }
-            });
-
-            return dropdown;
         }
 
-        private DropdownField CreateIntDropdown(SerializedProperty property, OptionsData optionsData) {
-            var dropdown = new DropdownField();
-
-            dropdown.choices = optionsData.displayNames.ToList();
-
-            // Find current selection
-            int currentValue = property.intValue;
-            int selectedIndex = Array.FindIndex(optionsData.options, opt =>
-                opt != null && int.TryParse(opt.ToString(), out int val) && val == currentValue);
-
-            if (selectedIndex < 0) selectedIndex = 0;
-            if (selectedIndex < dropdown.choices.Count) {
-                dropdown.index = selectedIndex;
+        private void HandleValueChange(SerializedProperty property, object[] options, string newValue, string currentValue) {
+            // Handle "(current)" option
+            if (newValue.EndsWith(" (current)")) {
+                SetPropertyValue(property, currentValue);
+                return;
             }
 
-            dropdown.RegisterValueChangedCallback(evt => {
-                int newIndex = dropdown.choices.IndexOf(evt.newValue);
-                if (newIndex >= 0 && newIndex < optionsData.options.Length) {
-                    if (int.TryParse(optionsData.options[newIndex]?.ToString(), out int newValue)) {
-                        property.intValue = newValue;
-                        property.serializedObject.ApplyModifiedProperties();
-                    }
-                }
-            });
-
-            return dropdown;
-        }
-
-        private DropdownField CreateFloatDropdown(SerializedProperty property, OptionsData optionsData) {
-            var dropdown = new DropdownField();
-
-            dropdown.choices = optionsData.displayNames.ToList();
-
-            // Find current selection
-            float currentValue = property.floatValue;
-            int selectedIndex = Array.FindIndex(optionsData.options, opt =>
-                opt != null && float.TryParse(opt.ToString(), out float val) && Mathf.Approximately(val, currentValue));
-
-            if (selectedIndex < 0) selectedIndex = 0;
-            if (selectedIndex < dropdown.choices.Count) {
-                dropdown.index = selectedIndex;
-            }
-
-            dropdown.RegisterValueChangedCallback(evt => {
-                int newIndex = dropdown.choices.IndexOf(evt.newValue);
-                if (newIndex >= 0 && newIndex < optionsData.options.Length) {
-                    if (float.TryParse(optionsData.options[newIndex]?.ToString(), out float newValue)) {
-                        property.floatValue = newValue;
-                        property.serializedObject.ApplyModifiedProperties();
-                    }
-                }
-            });
-
-            return dropdown;
-        }
-
-        private DropdownField CreateEnumDropdown(SerializedProperty property, OptionsData optionsData) {
-            var dropdown = new DropdownField();
-
-            dropdown.choices = optionsData.displayNames.ToList();
-
-            // Find current selection
-            var enumType = fieldInfo.FieldType;
-            var currentValue = Enum.ToObject(enumType, property.enumValueIndex);
-            int selectedIndex = Array.FindIndex(optionsData.options, opt =>
-                opt != null && opt.Equals(currentValue));
-
-            if (selectedIndex < 0) selectedIndex = 0;
-            if (selectedIndex < dropdown.choices.Count) {
-                dropdown.index = selectedIndex;
-            }
-
-            dropdown.RegisterValueChangedCallback(evt => {
-                int newIndex = dropdown.choices.IndexOf(evt.newValue);
-                if (newIndex >= 0 && newIndex < optionsData.options.Length) {
-                    var newValue = optionsData.options[newIndex];
-                    if (newValue != null && enumType.IsInstanceOfType(newValue)) {
-                        property.enumValueIndex = Convert.ToInt32(newValue);
-                        property.serializedObject.ApplyModifiedProperties();
-                    }
-                }
-            });
-
-            return dropdown;
-        }
-
-        private DropdownField CreateObjectDropdown(SerializedProperty property, OptionsData optionsData) {
-            var dropdown = new DropdownField();
-
-            dropdown.choices = optionsData.displayNames.ToList();
-
-            // Find current selection
-            var currentValue = property.objectReferenceValue;
-            int selectedIndex = Array.FindIndex(optionsData.options, opt =>
-                ReferenceEquals(opt, currentValue));
-
-            if (selectedIndex < 0) selectedIndex = 0;
-            if (selectedIndex < dropdown.choices.Count) {
-                dropdown.index = selectedIndex;
-            }
-
-            dropdown.RegisterValueChangedCallback(evt => {
-                int newIndex = dropdown.choices.IndexOf(evt.newValue);
-                if (newIndex >= 0 && newIndex < optionsData.options.Length) {
-                    var newValue = optionsData.options[newIndex];
-                    if (newValue is UnityEngine.Object unityObj) {
-                        property.objectReferenceValue = unityObj;
-                        property.serializedObject.ApplyModifiedProperties();
-                    }
-                }
-            });
-
-            return dropdown;
-        }
-
-        private DropdownField CreateGenericDropdown(SerializedProperty property, OptionsData optionsData) {
-            var dropdown = new DropdownField();
-
-            dropdown.choices = optionsData.displayNames.ToList();
-
-            // For generic properties, we need to handle them based on the field type
-            var fieldType = fieldInfo.FieldType;
-
-            // Find current selection by comparing serialized values
-            int selectedIndex = FindCurrentGenericSelection(property, optionsData, fieldType);
-
-            if (selectedIndex < 0) selectedIndex = 0;
-            if (selectedIndex < dropdown.choices.Count) {
-                dropdown.index = selectedIndex;
-            }
-
-            dropdown.RegisterValueChangedCallback(evt => {
-                int newIndex = dropdown.choices.IndexOf(evt.newValue);
-                if (newIndex >= 0 && newIndex < optionsData.options.Length) {
-                    var newValue = optionsData.options[newIndex];
-                    SetGenericPropertyValue(property, newValue, fieldType);
-                    property.serializedObject.ApplyModifiedProperties();
-                }
-            });
-
-            return dropdown;
-        }
-
-        private Label CreateUnsupportedField(SerializedProperty property) {
-            var errorLabel = new Label($"Options attribute not supported for {property.propertyType}");
-            errorLabel.style.color = Color.red;
-            return errorLabel;
-        }
-
-        private int FindCurrentGenericSelection(SerializedProperty property, OptionsData optionsData, Type fieldType) {
-            try {
-                // Get the current value from the serialized property
-                var currentValue = GetCurrentGenericValue(property, fieldType);
-
-                // Compare with each option
-                for (int i = 0; i < optionsData.options.Length; i++) {
-                    var option = optionsData.options[i];
-
-                    // Handle null comparisons
-                    if (currentValue == null && option == null) {
-                        return i;
-                    }
-                    if (currentValue == null || option == null) {
-                        continue;
-                    }
-
-                    // For value types and simple comparisons
-                    if (fieldType.IsValueType || fieldType == typeof(string)) {
-                        if (option.Equals(currentValue)) {
-                            return i;
-                        }
-                    }
-                    // For complex types, try multiple comparison strategies
-                    else {
-                        // First try direct equality
-                        if (option.Equals(currentValue)) {
-                            return i;
-                        }
-
-                        // Then try reference equality
-                        if (ReferenceEquals(option, currentValue)) {
-                            return i;
-                        }
-
-                        // For serializable objects, try JSON comparison
-                        try {
-                            var currentJson = JsonUtility.ToJson(currentValue);
-                            var optionJson = JsonUtility.ToJson(option);
-                            if (!string.IsNullOrEmpty(currentJson) && !string.IsNullOrEmpty(optionJson) && currentJson.Equals(optionJson)) {
-                                return i;
-                            }
-                        } catch {
-                            // JSON comparison failed, continue to next option
-                        }
-                    }
-                }
-            } catch (Exception ex) {
-                Debug.LogWarning($"Error finding current generic selection: {ex.Message}");
-            }
-
-            return -1;
-        }
-
-        private object GetCurrentGenericValue(SerializedProperty property, Type fieldType) {
-            // For generic properties, we need to reconstruct the object from the serialized data
-            try {
-                // Try to get the managed reference value if it's a managed reference
-                if (property.propertyType == SerializedPropertyType.ManagedReference) {
-                    return property.managedReferenceValue;
-                }
-
-                // Get the field value directly from the target object using reflection
-                var targetObject = property.serializedObject.targetObject;
-                var field = targetObject.GetType().GetField(property.name, BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
-                if (field != null) {
-                    return field.GetValue(targetObject);
-                }
-
-                // Fallback: try to create a default instance only if the type has a parameterless constructor
-                if (HasParameterlessConstructor(fieldType)) {
-                    return Activator.CreateInstance(fieldType);
-                }
-
-                // If no parameterless constructor, return null
-                return null;
-            } catch (Exception ex) {
-                Debug.LogWarning($"Error getting current generic value: {ex.Message}");
-                return null;
+            // Find the option index
+            var newIndex = Array.FindIndex(options, opt => opt?.ToString() == newValue);
+            if (newIndex >= 0) {
+                SetPropertyValue(property, options[newIndex].ToString());
             }
         }
 
-        private bool HasParameterlessConstructor(Type type) {
-            return type.GetConstructor(Type.EmptyTypes) != null;
+        private void SetPropertyValue(SerializedProperty property, string value) {
+            switch (property.propertyType) {
+                case SerializedPropertyType.String:
+                    property.stringValue = value;
+                    break;
+                case SerializedPropertyType.Integer:
+                    if (int.TryParse(value, out int intValue)) {
+                        property.intValue = intValue;
+                    }
+                    break;
+                case SerializedPropertyType.Float:
+                    if (float.TryParse(value, out float floatValue)) {
+                        property.floatValue = floatValue;
+                    }
+                    break;
+            }
+            property.serializedObject.ApplyModifiedProperties();
         }
 
-        private void SetGenericPropertyValue(SerializedProperty property, object value, Type fieldType) {
-            try {
-                // Handle managed reference types
-                if (property.propertyType == SerializedPropertyType.ManagedReference) {
-                    property.managedReferenceValue = value;
+        private void ReplaceInputField(PropertyField propertyField, DropdownField dropdown) {
+            // Find the input field within the PropertyField and replace it with our dropdown
+            var inputField = propertyField.Q(className: "unity-base-field__input");
+            if (inputField != null) {
+                inputField.Clear();
+                inputField.Add(dropdown);
+                return;
+            }
+
+            // Fallback: find text field input and replace it
+            var textInput = propertyField.Q(className: "unity-text-field__input");
+            if (textInput != null) {
+                var parent = textInput.parent;
+                if (parent != null) {
+                    parent.Clear();
+                    parent.Add(dropdown);
                     return;
                 }
+            }
 
-                // For other generic types, we need to set the value through reflection
-                var targetObject = property.serializedObject.targetObject;
-                var field = targetObject.GetType().GetField(property.name, BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
+            // Last resort: add the dropdown directly to the PropertyField
+            propertyField.Add(dropdown);
+        }
 
-                if (field != null) {
-                    // Convert value to the correct type if needed
-                    object convertedValue = value;
-                    if (value != null && !fieldType.IsInstanceOfType(value)) {
-                        try {
-                            convertedValue = Convert.ChangeType(value, fieldType);
-                        } catch {
-                            // If conversion fails, try to copy the value using JSON serialization
-                            try {
-                                var json = JsonUtility.ToJson(value);
-                                convertedValue = JsonUtility.FromJson(json, fieldType);
-                            } catch {
-                                Debug.LogWarning($"Cannot convert value of type {value.GetType()} to {fieldType}");
-                                return;
-                            }
-                        }
+        private object[] GetOptions(object target, MethodInfo method) {
+            try {
+                var result = method.Invoke(target, null);
+                if (result is Array array) {
+                    var options = new object[array.Length];
+                    for (int i = 0; i < array.Length; i++) {
+                        options[i] = array.GetValue(i);
                     }
-
-                    field.SetValue(targetObject, convertedValue);
-                    EditorUtility.SetDirty(targetObject);
+                    return options;
                 }
+                return null;
             } catch (Exception ex) {
-                Debug.LogError($"Error setting generic property value: {ex.Message}");
+                Debug.LogError($"Error calling method '{method.Name}': {ex.Message}");
+                return null;
             }
         }
 
@@ -380,7 +203,7 @@ namespace Lotec.Utils.Editor {
             if (target == null || string.IsNullOrEmpty(methodName))
                 return null;
 
-            Type type = target.GetType();
+            var type = target.GetType();
             MethodInfo method = null;
 
             while (type != null && method == null) {
@@ -389,130 +212,10 @@ namespace Lotec.Utils.Editor {
                     null,
                     Type.EmptyTypes,
                     null);
-
                 type = type.BaseType;
             }
 
             return method;
-        }
-
-        private OptionsData GetOptionsData(object target, MethodInfo method, SerializedProperty property) {
-            try {
-                object result = method.Invoke(target, null);
-                if (result == null) return null;
-
-                var options = ExtractOptionsArray(result);
-                if (options == null || options.Length == 0) return null;
-
-                var optionsAttribute = (OptionsAttribute)attribute;
-                var displayNames = CreateDisplayNames(options, optionsAttribute.DisplayFormat);
-
-                return new OptionsData { options = options, displayNames = displayNames };
-            } catch (Exception ex) {
-                Debug.LogError($"Error calling method '{method.Name}': {ex.Message}");
-                return null;
-            }
-        }
-
-        private object[] ExtractOptionsArray(object result) {
-            if (result is Array array) {
-                var objects = new object[array.Length];
-                for (int i = 0; i < array.Length; i++) {
-                    objects[i] = array.GetValue(i);
-                }
-                return objects;
-            } else if (result is IEnumerable enumerable) {
-                var list = new List<object>();
-                foreach (var item in enumerable) {
-                    list.Add(item);
-                }
-                return list.ToArray();
-            } else {
-                return new[] { result };
-            }
-        }
-
-        private string[] CreateDisplayNames(object[] options, string displayFormat) {
-            var displayNames = new string[options.Length];
-
-            for (int i = 0; i < options.Length; i++) {
-                var option = options[i];
-                if (option == null) {
-                    displayNames[i] = "null";
-                    continue;
-                }
-
-                if (!string.IsNullOrEmpty(displayFormat)) {
-                    try {
-                        // Simple format string replacement
-                        displayNames[i] = displayFormat.Replace("{0}", option.ToString());
-
-                        // Handle property access like {0.Name}
-                        if (displayFormat.Contains("{0.")) {
-                            displayNames[i] = FormatWithPropertyAccess(option, displayFormat);
-                        }
-                    } catch {
-                        displayNames[i] = option.ToString();
-                    }
-                } else {
-                    displayNames[i] = option.ToString();
-                }
-            }
-
-            return displayNames;
-        }
-
-        private string FormatWithPropertyAccess(object obj, string format) {
-            string result = format;
-
-            // Handle multiple property access placeholders like {0.Name}, {0.intensity}, etc.
-            var regex = new Regex(@"\{0\.([^}]+)\}");
-            var matches = regex.Matches(format);
-
-            foreach (Match match in matches) {
-                var propertyPath = match.Groups[1].Value;
-                var propertyValue = GetPropertyValue(obj, propertyPath);
-                var placeholder = match.Value; // The full match like {0.name}
-                result = result.Replace(placeholder, propertyValue?.ToString() ?? "null");
-            }
-
-            // Also handle the basic {0} placeholder
-            result = result.Replace("{0}", obj.ToString());
-
-            return result;
-        }
-
-        private object GetPropertyValue(object obj, string propertyName) {
-            if (obj == null || string.IsNullOrEmpty(propertyName)) {
-                return null;
-            }
-
-            try {
-                var type = obj.GetType();
-
-                // First try to get as a property
-                var property = type.GetProperty(propertyName, BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
-                if (property != null && property.CanRead) {
-                    return property.GetValue(obj);
-                }
-
-                // Then try to get as a field
-                var field = type.GetField(propertyName, BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
-                if (field != null) {
-                    return field.GetValue(obj);
-                }
-
-                Debug.LogWarning($"Property or field '{propertyName}' not found on type {type.Name}");
-            } catch (Exception ex) {
-                Debug.LogWarning($"Error accessing property '{propertyName}': {ex.Message}");
-            }
-
-            return null;
-        }
-
-        private class OptionsData {
-            public object[] options;
-            public string[] displayNames;
         }
     }
 }

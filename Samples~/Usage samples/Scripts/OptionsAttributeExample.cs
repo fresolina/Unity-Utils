@@ -23,15 +23,11 @@ namespace Lotec.Utils.Examples {
             public override string ToString() => name;
         }
 
-        [Header("String Options (like the old StringList)")]
+        [Header("Basic types")]
         [SerializeField, Options(nameof(GetStringOptions))]
         private string selectedString = "";
-
-        [Header("Integer Options")]
         [SerializeField, Options(nameof(GetIntOptions))]
         private int selectedInt = 0;
-
-        [Header("Float Options")]
         [SerializeField, Options(nameof(GetFloatOptions))]
         private float selectedFloat = 0f;
 
