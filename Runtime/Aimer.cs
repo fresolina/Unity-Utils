@@ -10,6 +10,7 @@ namespace Lotec.Interactions {
     [Serializable]
     public class Aimer<T> where T : class {
         [SerializeField] protected float _interactionLength = 100f;
+        [SerializeField] protected LayerMask _layerMask = Physics.DefaultRaycastLayers;
         [field: SerializeField, Tooltip("Defaults to Camera.main")]
         public Transform Anchor { get; set; }
         T _itemInWorld;
@@ -33,7 +34,7 @@ namespace Lotec.Interactions {
         T GetInteractable() {
             Ray ray = new(Anchor.position, Anchor.forward);
             Debug.DrawRay(ray.origin, ray.direction * _interactionLength, Color.yellow);
-            if (Physics.Raycast(ray, out RaycastHit hit, _interactionLength)) {
+            if (Physics.Raycast(ray, out RaycastHit hit, _interactionLength, _layerMask)) {
                 return hit.collider.GetComponentInParent<T>();
             }
             return default;
