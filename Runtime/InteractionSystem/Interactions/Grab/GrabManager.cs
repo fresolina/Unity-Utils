@@ -10,6 +10,7 @@ public class GrabManager : MonoBehaviour2 {
     [SerializeField, NotNull] Transform _handTransform;
     [SerializeField] IInteractionSystem _interactionSystem;
     Rigidbody _heldItem;
+    int _heldItemLayer;
 
     public GameObject HeldItem => _heldItem == null ? null : _heldItem.gameObject;
 
@@ -35,6 +36,14 @@ public class GrabManager : MonoBehaviour2 {
         if (_heldItem != null) return;
 
         _heldItem = body;
+        // Set layer to "Ignore Raycast" in object held, so it doesn't interfere with InteractionSystem raycasts
+        _heldItemLayer = _heldItem.gameObject.layer;
+        var colliders = _heldItem.GetComponentsInChildren<Collider>();
+        for (int i = 0; i < colliders.Length; i++) {
+            colliders[i].gameObject.layer = 2; // Layer 2 is "Ignore Raycast"
+        }
+
+        // Set Rigidbody properties for holding
         _heldItem.isKinematic = true;
         _heldItem.useGravity = false;
         _heldItem.transform.SetParent(_handTransform);
@@ -48,6 +57,10 @@ public class GrabManager : MonoBehaviour2 {
         _heldItem.isKinematic = false;
         _heldItem.useGravity = true;
         _heldItem.transform.SetParent(null);
+        var colliders = _heldItem.GetComponentsInChildren<Collider>();
+        for (int i = 0; i < colliders.Length; i++) {
+            colliders[i].gameObject.layer = _heldItemLayer;
+        }
         _heldItem = null;
         _interactionSystem?.UpdateInteractions();
     }
