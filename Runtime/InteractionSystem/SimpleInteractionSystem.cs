@@ -34,7 +34,7 @@ namespace Lotec.Interactions {
 
 
         public void Interact(int index) {
-            if (index >= ValidInteractions.Count) return;
+            if (index >= ValidInteractions.Count || index < 0) return;
 
             _interaction = ValidInteractions[index];
             _interaction.OnStartInteraction();

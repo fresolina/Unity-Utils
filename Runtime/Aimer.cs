@@ -2,7 +2,7 @@
 using System;
 using UnityEngine;
 
-namespace Lotec.Interactions {
+namespace Lotec.Utils {
     /// <summary>
     /// Get object of type T in world, by shooting a ray.
     /// </summary>

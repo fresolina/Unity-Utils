@@ -14,7 +14,7 @@ namespace Lotec.Interactions {
     /// </summary>
     [Serializable]
     public class InteractionSystemSensor : MonoBehaviour2, IObjectSensor<Interactable> {
-        [SerializeField] Aimer<Interactable> _aimer;
+        [SerializeField] Aimer<Interactable> _aimer = new();
 
         public event Action<Interactable> SensorUpdated;
         public Interactable SensorObject => _aimer.ItemInWorld;
