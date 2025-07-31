@@ -16,6 +16,17 @@ namespace Lotec.Utils.Extensions {
         }
 
         /// <summary>
+        /// Check if GameObject has component of type T.
+        /// </summary>
+        /// /// <param name="gameObject">The GameObject to check</param>
+        /// <typeparam name="T">The component type to check for</typeparam>
+        /// <returns>True if the GameObject has the component, false otherwise</returns>
+        public static bool HasComponent<T>(this GameObject gameObject) where T : Component {
+            if (gameObject == null) return false;
+            return gameObject.TryGetComponent<T>(out _);
+        }
+
+        /// <summary>
         /// Explicitly change GameObject active flag on all children.
         /// (SetActiveRecursively already exists in GameObject, but deprecated)
         /// TODO: Use GetChild() to skip foreach?
