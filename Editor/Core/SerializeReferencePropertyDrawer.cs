@@ -32,7 +32,6 @@ namespace Lotec.Utils.Interfaces.Editor {
         }
     }
 
-    [InitializeOnLoad]
     public static class TypeHelper {
         public static Dictionary<Type, Type[]> s_typesFromInterfaceType;
         public static readonly Type[] s_typesToCheckWithArrays;
@@ -107,9 +106,7 @@ namespace Lotec.Utils.Interfaces.Editor {
     [InitializeOnLoad]
     public static class AttributeChecker {
         static AttributeChecker() {
-            Assembly[] assemblies = AppDomain.CurrentDomain.GetAssemblies();
-
-            CheckForSerializeFieldAttribute(assemblies);
+            CheckForSerializeFieldAttribute(AppDomain.CurrentDomain.GetAssemblies());
         }
 
         public static void CheckForSerializeFieldAttribute(Assembly[] assemblies) {
@@ -117,16 +114,17 @@ namespace Lotec.Utils.Interfaces.Editor {
                 .SelectMany(assembly => assembly.GetTypes())
                 .SelectMany(type => type.GetFields(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance)
                     .Where(field => field.GetCustomAttributes(typeof(SerializeField), false).Any())
-                    .Select(field => new TypeMap { Name = field.Name, Type = field.FieldType })
+                    .Select(field => new TypeMap { Name = field.Name, Type = field.FieldType, DeclaringType = field.DeclaringType })
                     .Concat(type.GetProperties(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance)
                         .Where(property => property.GetCustomAttributes(typeof(SerializeField), false).Any())
-                        .Select(property => new TypeMap { Name = property.Name, Type = property.PropertyType })
+                        .Select(property => new TypeMap { Name = property.Name, Type = property.PropertyType, DeclaringType = property.DeclaringType })
                     )
                 )
                 .Where(member => TypeHelper.s_typesToCheckWithArrays.Contains(member.Type));
 
             foreach (var member in membersToCheck) {
-                Debug.LogWarning($"'{member.Name}' in class '{member.Type.DeclaringType.Name}' is of type '{member.Type}' and uses [SerializeField].");
+                string declaringTypeName = member.DeclaringType?.Name ?? "Unknown";
+                Debug.LogWarning($"'{member.Name}' in class '{declaringTypeName}' uses [SerializeField] but is of type '{member.Type}' which is defined as [SerializeInterface]. You should probably use [SerializeReference] on the field.");
             }
         }
     }
@@ -134,6 +132,7 @@ namespace Lotec.Utils.Interfaces.Editor {
         public Type Type;
         public string Name;
         public string HumanizedName;
+        public Type DeclaringType;
     }
 
     /// <summary>
