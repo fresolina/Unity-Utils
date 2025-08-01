@@ -41,10 +41,8 @@ jobs:
         # Create project in workspace to avoid permission issues
         mkdir -p TestProject/{Assets,Packages,ProjectSettings}
         
-        # Copy package to avoid symlink issues with Unity actions
-        cp -r . TestProject/Packages/com.lotecsoftware.utils
-        # Remove the TestProject copy to avoid recursion
-        rm -rf TestProject/Packages/com.lotecsoftware.utils/TestProject
+        # Create symlink to package (much faster than copying)
+        ln -sf "$(pwd)" TestProject/Packages/com.lotecsoftware.utils
         
         # Create manifest.json that includes our package
         cat > TestProject/Packages/manifest.json << 'EOF'
