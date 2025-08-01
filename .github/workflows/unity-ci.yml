@@ -38,14 +38,16 @@ jobs:
     - name: Create test project
       run: |
         echo "🏗️ Creating Unity test project..."
-        # Create project outside the git repository to avoid dirty state
-        sudo mkdir -p /opt/TestProject/{Assets,Packages,ProjectSettings}
+        # Create project in workspace to avoid permission issues
+        mkdir -p TestProject/{Assets,Packages,ProjectSettings}
         
-        # Create symlink to package
-        sudo ln -sf ${{ github.workspace }} /opt/TestProject/Packages/com.lotecsoftware.utils
+        # Copy package to avoid symlink issues with Unity actions
+        cp -r . TestProject/Packages/com.lotecsoftware.utils
+        # Remove the TestProject copy to avoid recursion
+        rm -rf TestProject/Packages/com.lotecsoftware.utils/TestProject
         
         # Create manifest.json that includes our package
-        sudo tee /opt/TestProject/Packages/manifest.json > /dev/null << 'EOF'
+        cat > TestProject/Packages/manifest.json << 'EOF'
         {
           "dependencies": {
             "com.lotecsoftware.utils": "file:./com.lotecsoftware.utils",
@@ -59,13 +61,10 @@ jobs:
         EOF
         
         # Create ProjectVersion.txt
-        sudo tee /opt/TestProject/ProjectSettings/ProjectVersion.txt > /dev/null << 'EOF'
+        cat > TestProject/ProjectSettings/ProjectVersion.txt << 'EOF'
         m_EditorVersion: ${{ matrix.unity-version }}
         m_EditorVersionWithRevision: ${{ matrix.unity-version }}
         EOF
-        
-        # Set proper permissions
-        sudo chown -R $USER:$USER /opt/TestProject
         
         echo "✅ Test project created"
 
@@ -76,7 +75,7 @@ jobs:
         UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
         UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
       with:
-        projectPath: /opt/TestProject
+        projectPath: TestProject
         unityVersion: ${{ matrix.unity-version }}
         testMode: ${{ matrix.test-mode }}
         artifactsPath: test-results-${{ matrix.test-mode }}
