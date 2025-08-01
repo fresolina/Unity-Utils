@@ -42,14 +42,11 @@ jobs:
         # Create project in workspace to avoid permission issues
         mkdir -p TestProject/{Assets,Packages,ProjectSettings}
         
-        # Create symlink to package (much faster than copying)
-        ln -sf "${{ github.workspace }}/com.lotecsoftware.utils" TestProject/Packages/com.lotecsoftware.utils
-
         # Create manifest.json that includes our package
         cat > TestProject/Packages/manifest.json << 'EOF'
         {
           "dependencies": {
-            "com.lotecsoftware.utils": "file:./com.lotecsoftware.utils",
+            "com.lotecsoftware.utils": "file:../../com.lotecsoftware.utils",
             "com.unity.test-framework": "1.3.9",
             "com.unity.ugui": "1.0.0"
           },
