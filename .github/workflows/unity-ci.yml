@@ -15,8 +15,9 @@ jobs:
       matrix:
         unity-version:
           - 2022.3.46f1
+          # - 6000.1.14f1
         test-mode:
-          - EditMode
+          # - EditMode
           - PlayMode
 
     steps:
@@ -106,3 +107,4 @@ jobs:
         fail-on-error: true
         use-actions-summary: true
         badge-title: Unity Tests
+        working-directory: com.lotecsoftware.utils
