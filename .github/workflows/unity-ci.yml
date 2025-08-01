@@ -43,8 +43,8 @@ jobs:
         mkdir -p TestProject/{Assets,Packages,ProjectSettings}
         
         # Create symlink to package (much faster than copying)
-        ln -sf com.lotecsoftware.utils TestProject/Packages/com.lotecsoftware.utils
-        
+        ln -sf "$(pwd)/com.lotecsoftware.utils" TestProject/Packages/com.lotecsoftware.utils
+
         # Create manifest.json that includes our package
         cat > TestProject/Packages/manifest.json << 'EOF'
         {
