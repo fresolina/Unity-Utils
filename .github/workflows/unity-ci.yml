@@ -17,7 +17,7 @@ jobs:
           - 2022.3.46f1
         test-mode:
           - EditMode
-          # - PlayMode
+          - PlayMode
 
     steps:
     - name: Checkout repository
@@ -95,3 +95,14 @@ jobs:
       with:
         name: Test results (${{ matrix.test-mode }})
         path: test-results-${{ matrix.test-mode }}
+
+    - name: Publish Test Results
+      uses: dorny/test-reporter@v2
+      if: success() || failure()
+      with:
+        name: Unity Tests (${{ matrix.test-mode }})
+        path: test-results-${{ matrix.test-mode }}/*.xml
+        reporter: java-junit
+        fail-on-error: true
+        use-actions-summary: true
+        badge-title: Unity Tests
