@@ -69,8 +69,6 @@ jobs:
         ls -la TestProject/
         echo "📦 Packages directory:"
         ls -la TestProject/Packages/
-        echo "🔗 Package symlink:"
-        ls -la TestProject/Packages/com.lotecsoftware.utils/
         echo "📄 Manifest content:"
         cat TestProject/Packages/manifest.json
         
