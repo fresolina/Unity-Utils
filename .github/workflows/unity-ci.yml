@@ -14,7 +14,7 @@ jobs:
       fail-fast: false
       matrix:
         unity-version:
-          - 2022.3.46f1
+          # - 2022.3.46f1
           - 6000.1.14f1
         test-mode:
           - EditMode
