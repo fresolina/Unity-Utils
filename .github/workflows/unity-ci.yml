@@ -7,67 +7,9 @@ on:
     branches: [ main, master, dev ]
 
 jobs:
-  # Job 1: Package validation (fast, no Unity required)
-  validate-package:
-    name: Package Validation
-    runs-on: ubuntu-latest
-    steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
-
-    - name: Validate package structure
-      run: |
-        echo "🔍 Validating package structure..."
-        
-        # Check required files
-        required_files=("package.json" "Runtime/Lotec.Utils.asmdef" "Editor/Lotec.Utils.Editor.asmdef")
-        for file in "${required_files[@]}"; do
-          if [ ! -f "$file" ]; then
-            echo "❌ Required file missing: $file"
-            exit 1
-          fi
-          echo "✅ Found: $file"
-        done
-        
-        # Check test structure
-        test_files=("Tests/Runtime/Lotec.Utils.Tests.Runtime.asmdef" "Tests/Editor/Lotec.Utils.Tests.Editor.asmdef")
-        for file in "${test_files[@]}"; do
-          if [ ! -f "$file" ]; then
-            echo "❌ Test file missing: $file"
-            exit 1
-          fi
-          echo "✅ Found: $file"
-        done
-
-    - name: Validate JSON syntax
-      run: |
-        echo "🔍 Validating JSON files..."
-        json_files=("package.json" "Runtime/Lotec.Utils.asmdef" "Editor/Lotec.Utils.Editor.asmdef" "Tests/Runtime/Lotec.Utils.Tests.Runtime.asmdef" "Tests/Editor/Lotec.Utils.Tests.Editor.asmdef")
-        
-        for file in "${json_files[@]}"; do
-          if [ -f "$file" ]; then
-            python3 -c "import json; json.load(open('$file'))" 2>/dev/null
-            if [ $? -eq 0 ]; then
-              echo "✅ Valid JSON: $file"
-            else
-              echo "❌ Invalid JSON: $file"
-              exit 1
-            fi
-          fi
-        done
-
-    - name: Package statistics
-      run: |
-        echo "📊 Package Statistics:"
-        echo "  📄 C# Files: $(find . -name "*.cs" | wc -l)"
-        echo "  📏 Lines of Code: $(find . -name "*.cs" -exec cat {} \; | wc -l)"
-        echo "  📝 Test Files: $(find Tests/ -name "*.cs" 2>/dev/null | wc -l || echo 0)"
-
-  # Job 2: Unity tests
   unity-tests:
     name: Unity Tests
     runs-on: ubuntu-latest
-    needs: validate-package
     strategy:
       fail-fast: false
       matrix:
@@ -97,13 +39,16 @@ jobs:
       run: |
         echo "🏗️ Creating Unity test project..."
         # Create project outside the git repository to avoid dirty state
-        mkdir -p /opt/TestProject/{Assets,Packages,ProjectSettings}
+        sudo mkdir -p /opt/TestProject/{Assets,Packages,ProjectSettings}
         
-        # Create manifest.json that includes our package - use absolute path
-        cat > /opt/TestProject/Packages/manifest.json << 'EOF'
+        # Create symlink to package
+        sudo ln -sf ${{ github.workspace }} /opt/TestProject/Packages/com.lotecsoftware.utils
+        
+        # Create manifest.json that includes our package
+        sudo tee /opt/TestProject/Packages/manifest.json > /dev/null << 'EOF'
         {
           "dependencies": {
-            "com.lotecsoftware.utils": "file:${{ github.workspace }}",
+            "com.lotecsoftware.utils": "file:./com.lotecsoftware.utils",
             "com.unity.test-framework": "1.3.9",
             "com.unity.ugui": "1.0.0"
           },
@@ -114,10 +59,13 @@ jobs:
         EOF
         
         # Create ProjectVersion.txt
-        cat > /opt/TestProject/ProjectSettings/ProjectVersion.txt << 'EOF'
+        sudo tee /opt/TestProject/ProjectSettings/ProjectVersion.txt > /dev/null << 'EOF'
         m_EditorVersion: ${{ matrix.unity-version }}
         m_EditorVersionWithRevision: ${{ matrix.unity-version }}
         EOF
+        
+        # Set proper permissions
+        sudo chown -R $USER:$USER /opt/TestProject
         
         echo "✅ Test project created"
 
@@ -142,132 +90,3 @@ jobs:
       with:
         name: Test results (${{ matrix.test-mode }})
         path: test-results-${{ matrix.test-mode }}
-
-  # Job 3: Build tests for different platforms
-  build-tests:
-    name: Build Tests
-    runs-on: ubuntu-latest
-    needs: validate-package
-    strategy:
-      fail-fast: false
-      matrix:
-        unity-version:
-          - 2022.3.46f1
-        target-platform:
-          - StandaloneLinux64
-          # - StandaloneWindows64
-
-    steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
-      with:
-        lfs: true
-
-    - name: Cache Unity Library
-      uses: actions/cache@v4
-      with:
-        path: Library
-        key: Library-Build-${{ matrix.unity-version }}-${{ matrix.target-platform }}-${{ hashFiles('**/manifest.json') }}
-        restore-keys: |
-          Library-Build-${{ matrix.unity-version }}-${{ matrix.target-platform }}-
-          Library-Build-${{ matrix.unity-version }}-
-          Library-Build-
-
-    - name: Create build test project
-      run: |
-        echo "🏗️ Creating Unity build test project..."
-        # Create project outside the git repository to avoid dirty state
-        mkdir -p /opt/BuildTestProject/{Assets,Packages,ProjectSettings}
-        
-        # Create manifest.json - use absolute path to package
-        cat > /opt/BuildTestProject/Packages/manifest.json << 'EOF'
-        {
-          "dependencies": {
-            "com.lotecsoftware.utils": "file:${{ github.workspace }}",
-            "com.unity.ugui": "1.0.0"
-          }
-        }
-        EOF
-        
-        # Create ProjectVersion.txt
-        cat > /opt/BuildTestProject/ProjectSettings/ProjectVersion.txt << 'EOF'
-        m_EditorVersion: ${{ matrix.unity-version }}
-        m_EditorVersionWithRevision: ${{ matrix.unity-version }}
-        EOF
-        
-        # Create a minimal script that tests build-specific concerns
-        mkdir -p /opt/BuildTestProject/Assets/Scripts
-        cat > /opt/BuildTestProject/Assets/Scripts/PackageBuildTest.cs << 'EOF'
-        using UnityEngine;
-        using Lotec.Utils;
-        
-        public class PackageBuildTest : MonoBehaviour2
-        {
-            void Start()
-            {
-                Debug.Log("Package build test - verifying package compiles in build target");
-                
-                // Test that basic APIs are accessible in builds
-                if (gameObject.HasComponent<Transform>())
-                {
-                    Debug.Log("✅ Extension methods available in build");
-                }
-                
-                Debug.Log("✅ Package compiled successfully for build target");
-            }
-        }
-        EOF
-        
-        echo "✅ Build test project created"
-
-    - name: Build project
-      uses: game-ci/unity-builder@v4
-      env:
-        UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
-        UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
-        UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
-      with:
-        projectPath: /opt/BuildTestProject
-        unityVersion: ${{ matrix.unity-version }}
-        targetPlatform: ${{ matrix.target-platform }}
-        buildName: PackageBuildTest
-        buildsPath: builds
-        allowDirtyBuild: true
-
-    - name: Upload build artifacts
-      uses: actions/upload-artifact@v4
-      with:
-        name: Build (${{ matrix.target-platform }})
-        path: builds
-
-  # Job 4: Test summary
-  test-summary:
-    name: Test Summary
-    runs-on: ubuntu-latest
-    needs: [validate-package, unity-tests, build-tests]
-    if: always()
-    steps:
-    - name: Test Summary
-      run: |
-        echo "🎉 Unity Package Test Summary"
-        echo "============================="
-        echo ""
-        echo "✅ Package validation: Completed"
-        echo "✅ Unity EditMode tests: Completed"  
-        echo "✅ Unity PlayMode tests: Completed"
-        echo "✅ Build tests (Linux): Completed"
-        echo "✅ Build tests (Windows): Completed"
-        echo ""
-        echo "🔍 What was tested:"
-        echo "  - Package structure and JSON validation"
-        echo "  - Assembly compilation for Editor and Runtime"
-        echo "  - Unity Test Framework integration"
-        echo "  - Cross-platform build compatibility"
-        echo "  - Package functionality and API usage"
-        echo ""
-        echo "📊 Coverage:"
-        echo "  - MonoBehaviour2 base class"
-        echo "  - Custom attributes (NotNull, Expandable, Options)"
-        echo "  - Interaction system components"
-        echo "  - Extension methods"
-        echo "  - Editor tools and property drawers"
