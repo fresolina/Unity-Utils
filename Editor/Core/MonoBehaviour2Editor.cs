@@ -25,6 +25,32 @@ namespace Lotec.Utils {
         private string _scriptTooltip;
 
         private void OnEnable() {
+            if (!EnsureTargetsReady()) return;
+
+            InitializeInspectorData();
+        }
+
+        void OnDisable() {
+            EditorApplication.delayCall -= RetryInitialize;
+        }
+
+        bool EnsureTargetsReady() {
+            if (targets == null || targets.Length == 0 || targets[0] == null) {
+                EditorApplication.delayCall += RetryInitialize;
+                return false;
+            }
+
+            return true;
+        }
+
+        void RetryInitialize() {
+            EditorApplication.delayCall -= RetryInitialize;
+            if (this == null || !EnsureTargetsReady()) return;
+
+            InitializeInspectorData();
+        }
+
+        void InitializeInspectorData() {
             _interfaceFieldMap = new Dictionary<string, FieldInfo>();
 
             // Retrieve all fields (public and private) from the target's type
