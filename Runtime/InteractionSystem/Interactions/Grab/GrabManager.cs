@@ -68,13 +68,27 @@ public class GrabManager : MonoBehaviour2 {
     internal void UseItemSecondaryAction() {
         if (_heldItem == null) return;
 
-        // Implement secondary action logic here
+        Interactable interactable = _heldItem.GetComponent<Interactable>();
+        if (interactable == null) return;
+
+        if (interactable.Interactions.Length > 1) {
+            interactable.Interactions[1].OnStartInteraction();
+            return;
+        }
+
         Debug.Log($"Using {_heldItem.name} with secondary action.");
     }
     internal void UseItemPrimaryAction() {
         if (_heldItem == null) return;
 
-        // Implement primary action logic here
+        Interactable interactable = _heldItem.GetComponent<Interactable>();
+        if (interactable == null) return;
+
+        if (interactable.Interactions.Length > 0) {
+            interactable.Interactions[0].OnStartInteraction();
+            return;
+        }
+
         Debug.Log($"Using {_heldItem.name} with primary action.");
     }
 }
