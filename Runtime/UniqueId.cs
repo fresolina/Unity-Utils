@@ -14,7 +14,9 @@ namespace Lotec.Utils {
         void EnsureRegistered() {
             if (string.IsNullOrEmpty(_id)) {
                 _id = System.Guid.NewGuid().ToString("N");
+#if UNITY_EDITOR
                 UnityEditor.EditorUtility.SetDirty(this);
+#endif
                 Debug.Log($"Assigned new UniqueId {_id} to GameObject '{gameObject.name}' in scene '{gameObject.scene.name}'");
             }
             UniqueIdManager.RegisterObject(_id, gameObject);
