@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.0](https://github.com/fresolina/Unity-Utils/compare/v1.1.0...v1.2.0) (2025-11-24)
+
+
+### Features
+
+* Lighting Scenario Manager ([fcee1d9](https://github.com/fresolina/Unity-Utils/commit/fcee1d929e94d2b571477cffd06c74a00c3137df))
+
 ## [1.1.0](https://github.com/fresolina/Unity-Utils/compare/v1.0.1...v1.1.0) (2025-07-08)
 
 
