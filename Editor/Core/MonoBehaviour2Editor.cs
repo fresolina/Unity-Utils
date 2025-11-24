@@ -1,16 +1,17 @@
 #if UNITY_EDITOR
-using UnityEngine;
-using UnityEditor;
-using System.Reflection;
 using System.Collections.Generic;
-using Lotec.Utils.Attributes.Editors; // Ensure you include the namespace for ScriptTooltipAttribute
+using System.Reflection;
+using UnityEditor;
+using UnityEditor.UIElements;
+using UnityEngine;
+using UnityEngine.UIElements;
 
 namespace Lotec.Utils {
     /// <summary>
     /// Custom Editor for MonoBehaviour2 to handle interface fields and tooltips while preserving default inspector behavior.
     /// </summary>
     [CustomEditor(typeof(MonoBehaviour2), true)]
-    public class MonoBehaviour2Editor : Editor {
+    public class MonoBehaviour2Editor : UnityEditor.Editor {
         // Dictionary to map interface field names to their corresponding FieldInfo
         private Dictionary<string, FieldInfo> _interfaceFieldMap;
 
@@ -24,6 +25,32 @@ namespace Lotec.Utils {
         private string _scriptTooltip;
 
         private void OnEnable() {
+            if (!EnsureTargetsReady()) return;
+
+            InitializeInspectorData();
+        }
+
+        void OnDisable() {
+            EditorApplication.delayCall -= RetryInitialize;
+        }
+
+        bool EnsureTargetsReady() {
+            if (targets == null || targets.Length == 0 || targets[0] == null) {
+                EditorApplication.delayCall += RetryInitialize;
+                return false;
+            }
+
+            return true;
+        }
+
+        void RetryInitialize() {
+            EditorApplication.delayCall -= RetryInitialize;
+            if (this == null || !EnsureTargetsReady()) return;
+
+            InitializeInspectorData();
+        }
+
+        void InitializeInspectorData() {
             _interfaceFieldMap = new Dictionary<string, FieldInfo>();
 
             // Retrieve all fields (public and private) from the target's type
@@ -34,12 +61,18 @@ namespace Lotec.Utils {
             // Filter serialized fields
             var serializedFields = new List<FieldInfo>();
             foreach (var field in allFields) {
-                if (!field.IsPublic && !System.Attribute.IsDefined(field, typeof(SerializeField))) continue;
+                // Check if field is serialized (public, [SerializeField], or [SerializeReference])
+                bool isSerializedField = field.IsPublic ||
+                                       System.Attribute.IsDefined(field, typeof(SerializeField)) ||
+                                       System.Attribute.IsDefined(field, typeof(SerializeReference));
+
+                if (!isSerializedField) continue;
 
                 serializedFields.Add(field);
 
-                // If the field is an interface, map it
-                if (field.FieldType.IsInterface) {
+                // If the field is an interface and NOT a SerializeReference, map it
+                // SerializeReference fields have their own custom property drawers
+                if (field.FieldType.IsInterface && !System.Attribute.IsDefined(field, typeof(SerializeReference))) {
                     _interfaceFieldMap[field.Name] = field;
                 }
             }
@@ -61,70 +94,84 @@ namespace Lotec.Utils {
             }
         }
 
-        public override void OnInspectorGUI() {
-            // Update the serialized object
-            serializedObject.Update();
+        public override VisualElement CreateInspectorGUI() {
+            var root = new VisualElement();
 
             // Draw the script field with custom tooltip
-            DrawScriptField();
+            CreateScriptField(root);
+
+            // Create fields container
+            var fieldsContainer = new VisualElement();
+            root.Add(fieldsContainer);
 
             // Iterate through sorted fields
             foreach (var field in _sortedSerializedFields) {
+                // Skip [SerializeReference] fields - they have their own custom property drawers and will be handled automatically
+                if (System.Attribute.IsDefined(field, typeof(SerializeReference))) {
+                    var property = serializedObject.FindProperty(field.Name);
+                    if (property != null) {
+                        var propertyField = new PropertyField(property);
+                        fieldsContainer.Add(propertyField);
+                    }
+                    continue;
+                }
+
                 // If the field is an interface, draw it with custom logic
                 if (_interfaceFieldMap.ContainsKey(field.Name)) {
-                    DrawInterfaceField(field);
+                    CreateInterfaceField(fieldsContainer, field);
                 } else {
-                    // Draw the default field using SerializedProperty
-                    DrawDefaultField(field);
+                    // Draw the default field using PropertyField
+                    CreateDefaultField(fieldsContainer, field);
                 }
             }
 
-            // Apply any modified properties
-            serializedObject.ApplyModifiedProperties();
+            // Add debug buttons for all public methods
+            CreateDebugButtons(root);
+
+            return root;
         }
 
         /// <summary>
-        /// Draws the script field with a custom tooltip.
+        /// Creates the script field with a custom tooltip.
         /// </summary>
-        private void DrawScriptField() {
+        private void CreateScriptField(VisualElement container) {
             SerializedProperty scriptProp = serializedObject.FindProperty("m_Script");
 
-            EditorGUI.BeginDisabledGroup(true);
-
-            // Create a GUIContent with the custom tooltip
-            GUIContent scriptLabel = new GUIContent("Script", _scriptTooltip);
-
-            // Draw the script field with the custom label
-            EditorGUILayout.PropertyField(scriptProp, scriptLabel, true);
-
-            EditorGUI.EndDisabledGroup();
+            var scriptField = new PropertyField(scriptProp, "Script");
+            scriptField.tooltip = _scriptTooltip;
+            scriptField.SetEnabled(false);
+            container.Add(scriptField);
         }
 
         /// <summary>
-        /// Draws a default serialized field using Unity's default property drawing.
+        /// Creates a default serialized field using Unity's default property drawing.
         /// Preserves existing [Tooltip] attributes on the field.
         /// </summary>
+        /// <param name="container">The container to add the field to.</param>
         /// <param name="field">The FieldInfo of the field to draw.</param>
-        private void DrawDefaultField(FieldInfo field) {
+        private void CreateDefaultField(VisualElement container, FieldInfo field) {
             SerializedProperty property = serializedObject.FindProperty(field.Name);
             if (property != null) {
                 // Retrieve TooltipAttribute if it exists
                 TooltipAttribute tooltipAttr = field.GetCustomAttribute<TooltipAttribute>();
                 string tooltipText = tooltipAttr != null ? tooltipAttr.tooltip : "";
 
-                // Create GUIContent with field name and tooltip
-                GUIContent label = new GUIContent(ObjectNames.NicifyVariableName(field.Name), tooltipText);
+                var propertyField = new PropertyField(property);
+                if (!string.IsNullOrEmpty(tooltipText)) {
+                    propertyField.tooltip = tooltipText;
+                }
 
-                EditorGUILayout.PropertyField(property, label, true);
+                container.Add(propertyField);
             }
         }
 
         /// <summary>
-        /// Draws an interface field with custom assignment logic and enhanced labeling.
+        /// Creates an interface field with custom assignment logic and enhanced labeling.
         /// Preserves existing [Tooltip] attributes on the field.
         /// </summary>
+        /// <param name="container">The container to add the field to.</param>
         /// <param name="field">The FieldInfo of the interface field.</param>
-        private void DrawInterfaceField(FieldInfo field) {
+        private void CreateInterfaceField(VisualElement container, FieldInfo field) {
             // Find the corresponding entry in _serializedInterfaceFields list
             int index = FindInterfaceFieldIndex(field.Name);
 
@@ -137,27 +184,27 @@ namespace Lotec.Utils {
 
             // Create a custom label that includes the interface name
             string labelText = $"{ObjectNames.NicifyVariableName(fieldNameProp.stringValue)} ({field.FieldType.Name})";
-            GUIContent label = new GUIContent(labelText, field.GetCustomAttribute<TooltipAttribute>()?.tooltip);
 
-            EditorGUI.BeginChangeCheck();
+            var propertyField = new PropertyField(objectRefProp, labelText);
 
-            // Don't know how to merge layout of NotNull attribute creating a red border, so hack it and add check also here.
-            Rect controlRect = EditorGUILayout.GetControlRect(true);
-            bool hasNotNull = System.Attribute.IsDefined(field, typeof(Attributes.NotNullAttribute));
-            if (hasNotNull) {
-                NotNullDrawerHelper.DrawRedBorderIfNull(controlRect, objectRefProp.objectReferenceValue);
+            // Add tooltip if available
+            TooltipAttribute tooltipAttr = field.GetCustomAttribute<TooltipAttribute>();
+            if (tooltipAttr != null) {
+                propertyField.tooltip = tooltipAttr.tooltip;
             }
-            // Draw the Object field with the custom label and optionally red border from NotNull
-            EditorGUI.PropertyField(controlRect, objectRefProp, label, true);
 
-            // If the user has changed the object
-            if (EditorGUI.EndChangeCheck()) {
-                Object newValue = objectRefProp.objectReferenceValue;
+            // Handle value changes for interface validation
+            propertyField.RegisterCallback<ChangeEvent<UnityEngine.Object>>((evt) => {
+                Object newValue = evt.newValue;
                 Object objectToAssign = GetObjectToAssign(newValue, field);
-                objectRefProp.objectReferenceValue = objectToAssign;
-                field.SetValue(target, objectToAssign);
-                EditorUtility.SetDirty(target);
-            }
+                if (objectToAssign != newValue) {
+                    objectRefProp.objectReferenceValue = objectToAssign;
+                    field.SetValue(target, objectToAssign);
+                    serializedObject.ApplyModifiedProperties();
+                }
+            });
+
+            container.Add(propertyField);
         }
 
         /// <summary>
@@ -211,6 +258,83 @@ namespace Lotec.Utils {
                 );
             }
             return componentToAssign;
+        }
+
+        /// <summary>
+        /// Creates debug buttons for all public methods in the target MonoBehaviour2 class.
+        /// Shows buttons under a collapsible "Debug" foldout.
+        /// </summary>
+        private void CreateDebugButtons(VisualElement container) {
+            // Get all public methods from the target's type
+            var publicMethods = target.GetType().GetMethods(BindingFlags.Public | BindingFlags.Instance);
+
+            // Filter out inherited methods and methods with parameters
+            List<MethodInfo> debugMethods = FilterMethods(publicMethods);
+
+            // Create debug buttons section if there are any methods
+            if (debugMethods.Count <= 0) return;
+
+            // Add some space before debug section
+            var spacer = new VisualElement();
+            spacer.style.height = 10;
+            container.Add(spacer);
+
+            // Create a foldout for debug methods
+            var debugFoldout = new Foldout();
+            debugFoldout.text = "Debug";
+            debugFoldout.value = false; // Collapsed by default
+            debugFoldout.style.marginBottom = 5;
+
+            // Create debug buttons container
+            var debugContainer = new VisualElement();
+            debugContainer.style.flexDirection = FlexDirection.Column;
+            debugContainer.style.paddingLeft = 15; // Indent the buttons
+
+            foreach (var method in debugMethods) {
+                var button = new Button(() => {
+                    try {
+                        method.Invoke(target, null);
+                        Debug.Log($"Called {method.Name}() on {target.name}");
+                    } catch (System.Exception ex) {
+                        Debug.LogError($"Error calling {method.Name}(): {ex.Message}");
+                    }
+                });
+
+                button.text = $"{ObjectNames.NicifyVariableName(method.Name)}()";
+                button.style.marginBottom = 2;
+                debugContainer.Add(button);
+            }
+
+            debugFoldout.Add(debugContainer);
+            container.Add(debugFoldout);
+        }
+
+        private static List<MethodInfo> FilterMethods(MethodInfo[] publicMethods) {
+            var debugMethods = new List<MethodInfo>();
+            foreach (var method in publicMethods) {
+                // Skip methods inherited from base Unity classes
+                if (method.DeclaringType == typeof(MonoBehaviour) ||
+                    method.DeclaringType == typeof(MonoBehaviour2) ||
+                    method.DeclaringType == typeof(Component) ||
+                    method.DeclaringType == typeof(UnityEngine.Object) ||
+                    method.DeclaringType == typeof(object)) {
+                    continue;
+                }
+
+                // Skip property getters/setters and special methods
+                if (method.IsSpecialName || method.Name.StartsWith("get_") || method.Name.StartsWith("set_")) {
+                    continue;
+                }
+
+                // Skip methods with parameters
+                if (method.GetParameters().Length > 0) {
+                    continue;
+                }
+
+                debugMethods.Add(method);
+            }
+
+            return debugMethods;
         }
     }
 }

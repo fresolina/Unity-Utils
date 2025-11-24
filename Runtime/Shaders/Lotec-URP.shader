@@ -23,13 +23,23 @@ Shader "Lotec/URP" {
 
         _OcclusionMap ("Ambient Occlusion (A)", 2D) = "white" {}
 
+        // Glass properties
+        [Toggle] _GlassMode("Glass Mode", Float) = 0
+        _RefractionStrength ("Refraction Strength", Range(0, 2)) = 0.5
+        _GlassColor ("Glass Tint", Color) = (0.9, 0.95, 1, 1)
+
         // Toggle stuff on/off.
         [Toggle] _EnvironmentReflections("Specular Environment Reflections", Float) = 1
         [Toggle] _RealtimeLighting("Realtime Lighting", Float) = 1
     }
 
     SubShader {
-        Tags { "RenderPipeline"="UniversalPipeline" "RenderType"="Opaque" "SRPBatcher"="true" }
+        Tags { 
+            "RenderPipeline"="UniversalPipeline" 
+            "RenderType"="Opaque" 
+            "Queue"="Geometry"
+            "SRPBatcher"="true" 
+        }
 
         // Main forward pass for the dominant (directional/main) light.
         Pass {
@@ -66,6 +76,11 @@ Shader "Lotec/URP" {
             #pragma shader_feature_local_fragment _ROUGHNESSOVERRIDE_ON
             #pragma shader_feature_local_fragment _METALLICOVERRIDE_ON
 
+            // Glass mode variant - this will create two shader variants
+            // When glass mode is enabled, we need transparent queue
+            // This is handled by a custom material inspector or user must set manually
+            #pragma shader_feature_local_fragment _GLASSMODE_ON
+
             struct appdata {
                 float4 position : POSITION;
                 float2 uv       : TEXCOORD0;
@@ -101,10 +116,13 @@ Shader "Lotec/URP" {
                 float4 _BaseColor;
                 half _Roughness;
                 half _BaseReflectance;
+                half _RefractionStrength;
+                half4 _GlassColor;
             CBUFFER_END
 
             CBUFFER_START(UnityPerCamera)
                 TEXTURE2D(urp_ReflProbes_Atlas); SAMPLER(sampler_urp_ReflProbes_Atlas);
+                TEXTURE2D(_CameraOpaqueTexture); SAMPLER(sampler_CameraOpaqueTexture);
             CBUFFER_END
 
             half3 GetNormal(v2f input)
@@ -186,6 +204,44 @@ Shader "Lotec/URP" {
                 return ambientReflection;
             }
 
+            half3 CalculateGlassEffect(v2f input, half3 normal, half3 directionToCamera, half3 ambientReflection)
+            {
+                // Calculate screen UV directly in fragment shader to avoid interpolation issues
+                float4 screenPos = ComputeScreenPos(TransformWorldToHClip(input.positionWS));
+                half2 screenUV = screenPos.xy / screenPos.w;
+                
+                // Apply refraction distortion if strength > 0
+                if (_RefractionStrength > 0.01) {
+                    // Convert world space normal to view space for screen-space offset
+                    half3 viewSpaceNormal = TransformWorldToViewDir(normal);
+                    
+                    // Create refraction offset using the view space normal
+                    half2 refractionOffset = viewSpaceNormal.xy * _RefractionStrength * 0.03;
+                    
+                    // Apply the offset to screen UV
+                    screenUV += refractionOffset;
+                    
+                    // Clamp to screen bounds to avoid sampling outside the texture
+                    screenUV = saturate(screenUV);
+                }
+                
+                // Sample the background through the glass
+                half3 screenColor = SAMPLE_TEXTURE2D(_CameraOpaqueTexture, sampler_CameraOpaqueTexture, screenUV).rgb;
+                
+                // Apply glass color tint
+                half3 tintedColor = screenColor * _GlassColor.rgb;
+                
+                return tintedColor;
+            }
+
+            half3 CalculateStandardLighting(half4 albedo, half3 ambientDiffuse, half3 realtimeLighting, half3 ambientReflection, half roughness)
+            {
+                // Standard PBR lighting calculation
+                half3 finalColor = albedo.rgb * ambientDiffuse + ambientReflection;
+                finalColor += realtimeLighting * albedo.rgb * roughness;
+                return finalColor;
+            }
+
             v2f vert (appdata vertexData) {
                 v2f output = (v2f)0;
                 UNITY_SETUP_INSTANCE_ID(vertexData);
@@ -205,7 +261,8 @@ Shader "Lotec/URP" {
                     output.binormal = cross(output.normal, output.tangent) * vertexData.tangent.w;
                 #endif
                 // Compute the screen space position.
-                output.positionSS = ComputeNormalizedDeviceCoordinates(output.positionCS);
+                float4 screenPos = ComputeScreenPos(output.positionCS);
+                output.positionSS = screenPos.xy / screenPos.w;
                 return output;
             }
 
@@ -228,15 +285,22 @@ Shader "Lotec/URP" {
                 // Apply Ambient Occlusion 
                 half occlusion = SAMPLE_TEXTURE2D(_OcclusionMap, sampler_OcclusionMap, input.uv).a;
                 ambientReflection *= occlusion;
+                ambientDiffuse *= occlusion;
+
+                // Calculate final color based on glass mode
+                half3 finalColor;
+                #ifdef _GLASSMODE_ON
+                    finalColor = CalculateGlassEffect(input, normal, directionToCamera, ambientReflection);
+                #else
+                    finalColor = CalculateStandardLighting(albedo, ambientDiffuse, realtimeLighting, ambientReflection, roughness);
+                #endif
                 
-                // Combine lighting.
-                half3 finalColor = albedo.rgb * ambientDiffuse + ambientReflection;
-                finalColor += realtimeLighting * albedo.rgb * roughness;
                 return half4(finalColor, 1);
             }
             ENDHLSL
         }
     }
 
+    CustomEditor "Lotec.Utils.Editor.Shaders.LotecURPMaterialInspector"
     FallBack "Hidden/Universal Render Pipeline/FallbackError"
 }

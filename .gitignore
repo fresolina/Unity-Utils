@@ -70,3 +70,9 @@ crashlytics-build.properties
 # Temporary auto-generated Android Assets
 /[Aa]ssets/[Ss]treamingAssets/aa.meta
 /[Aa]ssets/[Ss]treamingAssets/aa/*
+
+# Lighting scenario examples
+Samples~/Usage samples/Scenes/LightingScenarioExample
+Samples~/Usage samples/Scenes/LightingScenarioExample-LightingScenarios
+Samples~/Usage samples/Scenes/LightingScenarioExample-LightingScenarios.meta
+Samples~/Usage samples/Scenes/LightingScenarioExample.meta

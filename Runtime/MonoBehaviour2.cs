@@ -20,10 +20,6 @@ namespace Lotec.Utils {
         [SerializeField]
         List<InterfaceFieldData> _serializedInterfaceFields = new List<InterfaceFieldData>();
 
-        // Serialize Dictionaries
-        List<InterfaceFieldData> _serializedDictionaryKeyFields = new List<InterfaceFieldData>();
-        List<InterfaceFieldData> _serializedDictionaryValueFields = new List<InterfaceFieldData>();
-
 #if UNITY_EDITOR
         protected virtual void OnValidate() {
             this.AssertNotNullFields();
@@ -49,18 +45,8 @@ namespace Lotec.Utils {
             });
         }
 
-        void SerializeDictionary(FieldInfo f) {
-            // Ensure field is a dictionary
-            if (!f.FieldType.IsGenericType || f.FieldType.GetGenericTypeDefinition() != typeof(Dictionary<,>)) return;
-
-            // Get the value and cast to Object if it's a MonoBehaviour/ScriptableObject
-            // var value = f.GetValue(this) as UnityEngine.Object;
-        }
-
         public void OnBeforeSerialize() {
             _serializedInterfaceFields.Clear();
-            _serializedDictionaryKeyFields.Clear();
-            _serializedDictionaryValueFields.Clear();
 
             // Get all fields (public, private, instance) in the derived type(s).
             var fields = GetType().GetFields(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
@@ -70,7 +56,6 @@ namespace Lotec.Utils {
                 if (!Attribute.IsDefined(f, typeof(SerializeField))) continue;
 
                 SerializeInterface(f);
-                // SerializeDictionary(f);
             }
         }
 
