@@ -76,8 +76,6 @@ namespace Lotec.Utils.DialogueSystem {
                 _buttons[i].gameObject.SetActive(true);
                 if (_prefixWithNumber) {
                     _buttons[i].GetComponentInChildren<TextMeshProUGUI>().text = $"{i + 1}. {item}";
-                    string foo = item.ToString();
-                    Debug.Log($"Added choice button: '{foo}'");
                 } else {
                     _buttons[i].GetComponentInChildren<TextMeshProUGUI>().text = item.ToString();
                 }

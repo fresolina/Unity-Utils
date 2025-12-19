@@ -726,9 +726,7 @@ GameObject:
   - component: {fileID: 1995375443}
   - component: {fileID: 1995375442}
   - component: {fileID: 1995375444}
-  - component: {fileID: 1995375446}
   - component: {fileID: 1995375448}
-  - component: {fileID: 1995375447}
   - component: {fileID: 1995375449}
   m_Layer: 0
   m_Name: Dialogue Manager
@@ -750,11 +748,12 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Lotec.Utils::Lotec.Utils.DialogueSystem.DialogueManager
   _serializedInterfaceFields:
-  - fieldName: _talker
-    objectRef: {fileID: 1995375446}
   - fieldName: _choiceSelector
     objectRef: {fileID: 1020676074}
+  - fieldName: _output
+    objectRef: {fileID: 1995375449}
   _autoAdvanceOnSingleOption: 0
+  _prefixTextWithActorName: 1
 --- !u!4 &1995375443
 Transform:
   m_ObjectHideFlags: 0
@@ -784,34 +783,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::Lotec.Utils.DialogueExampleRun
   _player: {fileID: 11400000, guid: 8c1380b2d3850e241a93b5f1d1a26b06, type: 2}
   _npc: {fileID: 11400000, guid: fb142965c3a89bd4faf5445ac2b9996e, type: 2}
---- !u!114 &1995375446
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1995375441}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: e94a9e49238a8524499e33c861fd91ef, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Lotec.Utils::Lotec.Utils.DialogueSystem.DialogueTalker
-  _serializedInterfaceFields:
-  - fieldName: _output
-    objectRef: {fileID: 1995375449}
-  _prefixTextWithActorName: 1
---- !u!114 &1995375447
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1995375441}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: ab507e74d85911d48a15ae09a2e73108, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Lotec.Utils::Lotec.Utils.DialogueSystem.ConsoleOutput
 --- !u!114 &1995375448
 MonoBehaviour:
   m_ObjectHideFlags: 0

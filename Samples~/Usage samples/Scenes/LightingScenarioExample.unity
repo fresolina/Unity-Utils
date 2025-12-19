@@ -26,7 +26,7 @@ RenderSettings:
   m_AmbientIntensity: 1
   m_AmbientMode: 0
   m_SubtractiveShadowColor: {r: 0.42, g: 0.478, b: 0.627, a: 1}
-  m_SkyboxMaterial: {fileID: 2100000, guid: 3e5399bd195de7649b874f58c1b9f8a3, type: 2}
+  m_SkyboxMaterial: {fileID: 2100000, guid: 369b9ebe3a62b904dbc19bd332b44086, type: 2}
   m_HaloStrength: 0.5
   m_FlareStrength: 1
   m_FlareFadeSpeed: 3
@@ -37,7 +37,7 @@ RenderSettings:
   m_ReflectionBounces: 1
   m_ReflectionIntensity: 1
   m_CustomReflection: {fileID: 0}
-  m_Sun: {fileID: 18044039}
+  m_Sun: {fileID: 373876031}
   m_UseRadianceAmbientProbe: 0
 --- !u!157 &3
 LightmapSettings:
@@ -93,7 +93,7 @@ LightmapSettings:
     m_ExportTrainingData: 0
     m_TrainingDataDestination: TrainingData
     m_LightProbeSampleCountMultiplier: 4
-  m_LightingDataAsset: {fileID: 112000000, guid: 7ebe141d5f0ed224e82eff95e7180177, type: 2}
+  m_LightingDataAsset: {fileID: 112000000, guid: 96a9e34761b73a249b1ffaabbea03e6d, type: 2}
   m_LightingSettings: {fileID: 4890085278179872738, guid: 7f7f904e76f80e04c9e267589066aebc, type: 2}
 --- !u!196 &4
 NavMeshSettings:
@@ -438,7 +438,7 @@ MonoBehaviour:
   _scenarios:
   - {fileID: 942409941}
   - {fileID: 1305760726}
-  _activeScenario: {fileID: 942409941}
+  _activeScenario: {fileID: 1305760726}
 --- !u!1 &485730035
 GameObject:
   m_ObjectHideFlags: 0
@@ -481,7 +481,7 @@ ReflectionProbe:
   m_Enabled: 1
   serializedVersion: 2
   m_Type: 0
-  m_Mode: 0
+  m_Mode: 2
   m_RefreshMode: 0
   m_TimeSlicingMode: 0
   m_Resolution: 128
@@ -503,7 +503,7 @@ ReflectionProbe:
   m_RenderDynamicObjects: 0
   m_UseOcclusionCulling: 1
   m_Importance: 1
-  m_CustomBakedTexture: {fileID: 8900000, guid: 058827576b0ff8e4bb3cf4a66109376e, type: 3}
+  m_CustomBakedTexture: {fileID: 8900000, guid: a144fcbfd75bd32499614164b100aad5, type: 3}
 --- !u!1 &623161995
 GameObject:
   m_ObjectHideFlags: 0
@@ -758,7 +758,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!4 &942409940
 Transform:
   m_ObjectHideFlags: 0
@@ -846,27 +846,25 @@ MonoBehaviour:
     lightmapDir: {fileID: 2800000, guid: 8862eda2adb91b747bbd3c0c63f2549e, type: 3}
     shadowMask: {fileID: 0}
   _rendererData:
-    _keys:
-    - {fileID: 1804697563}
-    - {fileID: 1035797388}
-    - {fileID: 1718524829}
-    - {fileID: 1015664301}
-    - {fileID: 1885827243}
-    - {fileID: 940014244}
-    _values:
-    - lightmapIndex: 0
-      lightmapScaleOffset: {x: 0.14954378, y: 0.14954378, z: 0.24939348, w: 0.77283096}
-    - lightmapIndex: 0
-      lightmapScaleOffset: {x: 0.23612174, y: 0.23612174, z: -0.0009576546, w: 0.6591986}
-    - lightmapIndex: 0
-      lightmapScaleOffset: {x: 0.987776, y: 0.987776, z: -0.004006189, w: -0.004006189}
-    - lightmapIndex: 0
-      lightmapScaleOffset: {x: 0.14954378, y: 0.14954378, z: -0.00060651463, w: 0.8314247}
-    - lightmapIndex: 0
-      lightmapScaleOffset: {x: 0.14954378, y: 0.14954378, z: 0.24939348, w: 0.6595497}
-    - lightmapIndex: 0
-      lightmapScaleOffset: {x: 0.14954378, y: 0.14954378, z: 0.24939348, w: 0.8861122}
-  _lightingDataAsset: {fileID: 112000000, guid: 7ebe141d5f0ed224e82eff95e7180177, type: 2}
+  - renderer: {fileID: 1015664301}
+    lightmapIndex: 0
+    lightmapScaleOffset: {x: 0.14954378, y: 0.14954378, z: -0.00060651463, w: 0.8314247}
+  - renderer: {fileID: 1718524829}
+    lightmapIndex: 0
+    lightmapScaleOffset: {x: 0.987776, y: 0.987776, z: -0.004006189, w: -0.004006189}
+  - renderer: {fileID: 940014244}
+    lightmapIndex: 0
+    lightmapScaleOffset: {x: 0.14954378, y: 0.14954378, z: 0.24939348, w: 0.8861122}
+  - renderer: {fileID: 1035797388}
+    lightmapIndex: 0
+    lightmapScaleOffset: {x: 0.23612174, y: 0.23612174, z: -0.0009576546, w: 0.6591986}
+  - renderer: {fileID: 1885827243}
+    lightmapIndex: 0
+    lightmapScaleOffset: {x: 0.14954378, y: 0.14954378, z: 0.24939348, w: 0.6595497}
+  - renderer: {fileID: 1804697563}
+    lightmapIndex: 0
+    lightmapScaleOffset: {x: 0.14954378, y: 0.14954378, z: 0.24939348, w: 0.77283096}
+  _lightingDataAsset: {fileID: 112000000, guid: 96a9e34761b73a249b1ffaabbea03e6d, type: 2}
 --- !u!1 &988205329
 GameObject:
   m_ObjectHideFlags: 0
@@ -1170,7 +1168,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!4 &1305760725
 Transform:
   m_ObjectHideFlags: 0
@@ -1258,27 +1256,13 @@ MonoBehaviour:
     lightmapDir: {fileID: 2800000, guid: 3a52f0acaca26484f88b75f5c4aa0e1c, type: 3}
     shadowMask: {fileID: 0}
   _rendererData:
-    _keys:
-    - {fileID: 1804697563}
-    - {fileID: 1035797388}
-    - {fileID: 1718524829}
-    - {fileID: 1015664301}
-    - {fileID: 1885827243}
-    - {fileID: 940014244}
-    _values:
-    - lightmapIndex: 0
-      lightmapScaleOffset: {x: 0.14954378, y: 0.14954378, z: 0.24939348, w: 0.77283096}
-    - lightmapIndex: 0
-      lightmapScaleOffset: {x: 0.23612174, y: 0.23612174, z: -0.0009576546, w: 0.6591986}
-    - lightmapIndex: 0
-      lightmapScaleOffset: {x: 0.987776, y: 0.987776, z: -0.004006189, w: -0.004006189}
-    - lightmapIndex: 0
-      lightmapScaleOffset: {x: 0.14954378, y: 0.14954378, z: -0.00060651463, w: 0.8314247}
-    - lightmapIndex: 0
-      lightmapScaleOffset: {x: 0.14954378, y: 0.14954378, z: 0.24939348, w: 0.6595497}
-    - lightmapIndex: 0
-      lightmapScaleOffset: {x: 0.14954378, y: 0.14954378, z: 0.24939348, w: 0.8861122}
-  _lightingDataAsset: {fileID: 112000000, guid: 7b1297aafbde71945871984e07cc44d8, type: 2}
+  - renderer: {fileID: 0}
+    lightmapIndex: 0
+    lightmapScaleOffset: {x: 0, y: 0, z: 0, w: 0}
+  - renderer: {fileID: 0}
+    lightmapIndex: 0
+    lightmapScaleOffset: {x: 0, y: 0, z: 0, w: 0}
+  _lightingDataAsset: {fileID: 112000000, guid: 1783be6eaa7021c4895f46f299ae5f3d, type: 2}
 --- !u!1 &1669602938
 GameObject:
   m_ObjectHideFlags: 0

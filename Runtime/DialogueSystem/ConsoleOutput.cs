@@ -10,7 +10,7 @@ namespace Lotec.Utils.DialogueSystem {
         public void SetText(string text) => Debug.Log(text);
         public IEnumerator SetTextRoutine(string text) {
             Debug.Log(text);
-            yield break;
+            yield return null;
         }
     }
 }

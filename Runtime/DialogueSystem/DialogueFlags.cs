@@ -38,7 +38,7 @@ namespace Lotec.Utils.DialogueSystem {
                 DialogueFlags.Set(_flag);
             else
                 DialogueFlags.Unset(_flag);
-            yield break;
+            yield return null;
         }
     }
 }

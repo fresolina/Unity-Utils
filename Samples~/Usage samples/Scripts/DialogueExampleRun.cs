@@ -1,4 +1,7 @@
-namespace Lotec.Utils {
+
+using UnityEngine;
+
+namespace Lotec.Utils.DialogueSystem {
     public class DialogueExampleRun : MonoBehaviour {
         [SerializeField] DialogueActor _player;
         [SerializeField] DialogueActor _npc;

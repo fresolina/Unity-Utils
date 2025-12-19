@@ -7,9 +7,9 @@ Möjligen krävs att vi använda System.Guid för att länka mellan asset och sc
 
 ## TODO
 
-Anpassa exemplet efter så få specialactions som möjligt.
+* Sätt upp RectTransform for TargetActorOutput och PlayerActorOutput i DialogueManager prefab. Visa/Göm beroende på vem som pratar.
 
-Men testa även "Give Room" -> Starta en action som gör att inkeepern går iväg och hämtar en nyckel ur nyckelskåpet
+* Men testa även "Give Room" -> Starta en action som gör att inkeepern går iväg och hämtar en nyckel ur nyckelskåpet
 och när han kommer tillbaka så fortsätter vi dialogen (kanske genom MultipleAction med flera seriella steg?)
 Innkeeper.FetchKey
 StartDialogue(give key)
